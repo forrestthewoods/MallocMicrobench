@@ -192,10 +192,10 @@ int main()
 
 #if 1
     // Config
-    constexpr double replaySpeed = 4.0;
+    constexpr double replaySpeed = 0.0;
 
     // Malloc and Free as fast as possible
-    std::unordered_map<uint64_t, std::pair<void*, uint64_t>> liveAllocs;
+    std::unordered_map<uint64_t, std::tuple<void*, uint64_t, size_t>> liveAllocs;
     std::vector<Nanoseconds> allocTimes;
     std::vector<Nanoseconds> freeTimes;
     std::vector<MemoryEntry> failedAllocs;
@@ -253,7 +253,7 @@ int main()
             
             // Store pointer in live list
             if (!liveAllocs.contains(entry.ptr)) {
-                liveAllocs[entry.ptr] = std::pair(ptr, allocSize);
+                liveAllocs[entry.ptr] = std::tuple(ptr, allocSize, idx);
 
                 // Store malloc time
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
@@ -266,6 +266,16 @@ int main()
                 maxLiveAllocBytes = std::max(maxLiveAllocBytes, curLiveBytes);
             }
             else {
+                // multithreaded alloc/free can sometimes have inconsistent timestamps
+                // we can safely ignore them.
+                
+                /*
+                std::cout << "Failed alloc. Idx: [" << idx << "] Size: [" << entry.allocSize << "]  Ptr: [" << entry.ptr << "] Thread: [" << entry.threadId << "]  time: [" << entry.timestamp << "]" << std::endl;
+                size_t existingIdx = std::get<2>(liveAllocs[entry.ptr]);
+                auto const& existingEntry = journal[existingIdx];
+                std::cout << "  Existing: Idx: [" << existingIdx << "] Size: [" << existingEntry.allocSize << "]  Ptr: [" << existingEntry.ptr << "] Thread: [" << existingEntry.threadId << "]  time: [" << existingEntry.timestamp << "]" << std::endl;
+                */
+
                 failedAllocs.push_back(entry);
             }
         }
@@ -273,8 +283,8 @@ int main()
             // Find ptr
             auto iter = liveAllocs.find(entry.ptr);
             if (iter != liveAllocs.end()) {
-                void* ptr = iter->second.first;
-                uint64_t allocSize = iter->second.second;
+                void* ptr = std::get<0>(iter->second);
+                uint64_t allocSize = std::get<1>(iter->second);
 
                 // Perform and instrument free
                 auto freeStart = Clock::now();
@@ -293,6 +303,7 @@ int main()
                 curLiveBytes -= allocSize;
             }
             else {
+                //std::cout << "Failed free. Idx: [" << idx << "] Size: [" << entry.allocSize << "]  Ptr: [" << entry.ptr << "] Thread: [" << entry.threadId << "]  time: [" << entry.timestamp << "]" << std::endl;
                 failedFrees.push_back(entry);
             }
         }
