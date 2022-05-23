@@ -7,6 +7,7 @@
 #include <numeric>
 #include <random>
 #include <thread>
+#include <unordered_map>
 
 #pragma intrinsic(__rdtsc)
 
@@ -28,8 +29,11 @@ std::string formatTime(Nanoseconds ns) {
     else if (count < 1000 * 1000) {
         return std::format("{:.2f} microseconds", (double)count / 1000);
     }
-    else {
+    else if (count < 1000 * 1000 * 1000) {
         return std::format("{:.2f} milliseconds", (double)count / 1000 / 1000);
+    }
+    else {
+        return std::format("{:.2f} seconds", (double)count / 1000 / 1000 / 1000);
     }
 }
 
@@ -177,10 +181,183 @@ std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
 int main()
 {
     std::cout << "Hello World!" << std::endl << std::endl;
-
-    auto journal = ParseMemoryLog("C:/temp/doom3_memory_startup.txt");
+    
+    //constexpr const char* logpath = "C:/temp/doom3_memory_startup.txt";
+    constexpr const char* logpath = "C:/temp/doom3_memory_foo_level_died.txt";
+    std::cout << "Parsing log file: " << logpath << std::endl;
+    auto journal = ParseMemoryLog(logpath);
+    std::cout << "Parse complete" << std::endl << std::endl;
 
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
+
+#if 1
+    // Config
+    constexpr double replaySpeed = 4.0;
+
+    // Malloc and Free as fast as possible
+    std::unordered_map<uint64_t, std::pair<void*, uint64_t>> liveAllocs;
+    std::vector<Nanoseconds> allocTimes;
+    std::vector<Nanoseconds> freeTimes;
+    std::vector<MemoryEntry> failedAllocs;
+    std::vector<MemoryEntry> failedFrees;
+
+    int64_t totalAllocs = 0;
+    int64_t totalAllocBytes = 0;
+    int64_t curLiveBytes = 0;
+    int64_t maxLiveAllocBytes = 0;
+    int64_t totalFrees = 0;
+
+    using ReplayClock = std::chrono::steady_clock;
+    auto replayStart = ReplayClock::now();
+
+    auto replayDuration = std::chrono::nanoseconds{ journal.back().timestamp };
+    std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
+    std::cout << "Replay Speed: " << replaySpeed << std::endl;
+    std::cout << std::endl;
+
+    float nextReplayMarker = 0.1f;
+
+    size_t idx = 0;
+    while (idx < journal.size()) {
+        auto const& entry = journal[idx];
+
+        // Playback replay
+        if (replaySpeed > 0.0) {
+            for (;;) {
+                // Get "real" replayTime
+                auto replayTime = ReplayClock::now() - replayStart;
+
+                // Scale replayTime
+                auto scaledReplayTime = Nanoseconds{ long long((double)replayTime.count() * replaySpeed) };
+
+                double replayFrac = (double)scaledReplayTime.count() / (double)replayDuration.count();
+                if (replayFrac > nextReplayMarker) {
+                    std::cout << "Replay Progress: " << std::format("{}%  RealTime: {}", (int)(nextReplayMarker * 100.0), formatTime(replayTime)) << std::endl;
+                    nextReplayMarker += 0.1f;
+                }
+                
+                // Spin until replay
+                if (scaledReplayTime > entry.timestamp) {
+                    break;
+                }
+            }
+        }
+
+        if (entry.op == MemoryOp::Alloc) {
+            auto allocSize = entry.allocSize;
+
+            // Perform and instrument malloc
+            auto mallocStart = Clock::now();
+            auto ptr = ::malloc(entry.allocSize);
+            auto mallocEnd = Clock::now();
+            
+            // Store pointer in live list
+            if (!liveAllocs.contains(entry.ptr)) {
+                liveAllocs[entry.ptr] = std::pair(ptr, allocSize);
+
+                // Store malloc time
+                Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
+                allocTimes.push_back(mallocTime);
+
+                // Update counters
+                totalAllocs += 1;
+                totalAllocBytes += allocSize;
+                curLiveBytes += allocSize;
+                maxLiveAllocBytes = std::max(maxLiveAllocBytes, curLiveBytes);
+            }
+            else {
+                failedAllocs.push_back(entry);
+            }
+        }
+        else {
+            // Find ptr
+            auto iter = liveAllocs.find(entry.ptr);
+            if (iter != liveAllocs.end()) {
+                void* ptr = iter->second.first;
+                uint64_t allocSize = iter->second.second;
+
+                // Perform and instrument free
+                auto freeStart = Clock::now();
+                ::free(ptr);
+                auto freeEnd = Clock::now();
+
+                // Remove pointer from live list
+                liveAllocs.erase(iter);
+
+                // Store free time
+                Nanoseconds freeTime = RdtscClock::ticksToNs(freeEnd - freeStart);
+                freeTimes.push_back(freeTime);
+
+                // Update counters
+                totalFrees += 1;
+                curLiveBytes -= allocSize;
+            }
+            else {
+                failedFrees.push_back(entry);
+            }
+        }
+
+        idx += 1;
+    }
+    std::cout << std::endl;
+
+    // Results
+    std::sort(allocTimes.begin(), allocTimes.end());
+    size_t mallocCount = allocTimes.size();
+
+    std::sort(freeTimes.begin(), freeTimes.end());
+    size_t freeCount = freeTimes.size();
+
+    Nanoseconds totalMallocTimeNs{ 0 };
+    for (auto const& allocTime : allocTimes) {
+        totalMallocTimeNs += allocTime;
+    }
+
+    std::cout << "== Replay Results ==" << std::endl;
+    std::cout << "Number of Mallocs:    " << mallocCount << std::endl;
+    std::cout << "Number of Frees:      " << freeCount << std::endl;
+    std::cout << "Total Allocation:     " << formatBytes(totalAllocBytes) << std::endl;
+    std::cout << "Max Live Bytes:       " << formatBytes(maxLiveAllocBytes) << std::endl;
+    std::cout << "Average Allocation:   " << formatBytes(totalAllocBytes / mallocCount) << std::endl;
+    std::cout << "Average Malloc Time:  " << formatTime(totalMallocTimeNs / mallocCount) << std::endl;
+    std::cout << "Num Leaked Allocs:    " << liveAllocs.size() << std::endl;
+    std::cout << "Num Leaked Bytes:     " << formatBytes(curLiveBytes) << std::endl;
+    std::cout << "Num Failed Allocs:    " << failedAllocs.size() << std::endl;
+    std::cout << "Num Failed Frees:     " << failedFrees.size() << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Alloc Time" << std::endl;
+    std::cout << "Best:    " << formatTime(allocTimes[0]) << std::endl;
+    std::cout << "p1:      " << formatTime(allocTimes[size_t((float)mallocCount * 0.01f)]) << std::endl;
+    std::cout << "p10:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.10f)]) << std::endl;
+    std::cout << "p25:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.25f)]) << std::endl;
+    std::cout << "p50:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.50f)]) << std::endl;
+    std::cout << "p75:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.75f)]) << std::endl;
+    std::cout << "p90:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.90f)]) << std::endl;
+    std::cout << "p95:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.95f)]) << std::endl;
+    std::cout << "p98:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.98f)]) << std::endl;
+    std::cout << "p99:     " << formatTime(allocTimes[size_t((float)mallocCount * 0.99f)]) << std::endl;
+    std::cout << "p99.9:   " << formatTime(allocTimes[size_t((float)mallocCount * 0.999f)]) << std::endl;
+    std::cout << "p99.99:  " << formatTime(allocTimes[size_t((float)mallocCount * 0.9999f)]) << std::endl;
+    std::cout << "p99.999: " << formatTime(allocTimes[size_t((float)mallocCount * 0.99999f)]) << std::endl;
+    std::cout << "Worst:   " << formatTime(allocTimes[mallocCount - 1]) << std::endl << std::endl;
+
+    std::cout << "Free Time" << std::endl;
+    std::cout << "Best:    " << formatTime(freeTimes[0]) << std::endl;
+    std::cout << "p1:      " << formatTime(freeTimes[size_t((float)freeCount * 0.01f)]) << std::endl;
+    std::cout << "p10:     " << formatTime(freeTimes[size_t((float)freeCount * 0.10f)]) << std::endl;
+    std::cout << "p25:     " << formatTime(freeTimes[size_t((float)freeCount * 0.25f)]) << std::endl;
+    std::cout << "p50:     " << formatTime(freeTimes[size_t((float)freeCount * 0.50f)]) << std::endl;
+    std::cout << "p75:     " << formatTime(freeTimes[size_t((float)freeCount * 0.75f)]) << std::endl;
+    std::cout << "p90:     " << formatTime(freeTimes[size_t((float)freeCount * 0.90f)]) << std::endl;
+    std::cout << "p95:     " << formatTime(freeTimes[size_t((float)freeCount * 0.95f)]) << std::endl;
+    std::cout << "p98:     " << formatTime(freeTimes[size_t((float)freeCount * 0.98f)]) << std::endl;
+    std::cout << "p99:     " << formatTime(freeTimes[size_t((float)freeCount * 0.99f)]) << std::endl;
+    std::cout << "p99.9:   " << formatTime(freeTimes[size_t((float)freeCount * 0.999f)]) << std::endl;
+    std::cout << "p99.99:  " << formatTime(freeTimes[size_t((float)freeCount * 0.9999f)]) << std::endl;
+    std::cout << "p99.999: " << formatTime(freeTimes[size_t((float)freeCount * 0.99999f)]) << std::endl;
+    std::cout << "Worst:   " << formatTime(freeTimes[freeCount - 1]) << std::endl << std::endl;
+#else
 
     // Config
     constexpr const uint64_t kilobyte = 1024;
@@ -296,6 +473,7 @@ int main()
         }
         pointers.clear();
     }
+#endif
 
     std::cout << "Goodbye Cruel World!\n";
 
