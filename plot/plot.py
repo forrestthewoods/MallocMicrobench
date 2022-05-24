@@ -1,32 +1,15 @@
 import matplotlib.pyplot as plt
 import math
-#import numpy as np
 import csv
 
-
-#def heatmap2d(arr: np.ndarray):
-def heatmap2d(arr):
-    #plt.imshow(arr, cmap='viridis')
-    plt.imshow(arr, cmap='gist_yarg')
-    plt.colorbar()
-    plt.show()
-
-
-data = [
-    [1,2,0,4,5],
-    [2,3,0,5,6],
-    [3,4,5,6,7],
-    [4,5,6,7,8],
-]
-
-#test_array = np.arange(100 * 100).reshape(100, 100)
-heatmap2d(data)
 
 # Parse data
 maxAllocTime = 0
 logBase = 10
 
-entries = []
+timestamps = []
+allocTimes = []
+maxEntries = 0
 with open("alloc_times.csv") as csv_file:
     reader = csv.reader(csv_file)
     
@@ -37,11 +20,41 @@ with open("alloc_times.csv") as csv_file:
     for row in reader:
         timestamp = float(row[0])
         allocTime = float(row[1])
-        entries.append((timestamp, allocTime))
-        maxAllocTime = max(maxAllocTime, allocTime)
+        timestamps.append(timestamp)
+        allocTimes.append(allocTime)
+        if maxEntries > 0 and len(timestamps) >= maxEntries:
+            break
+        #maxAllocTime = max(maxAllocTime, allocTime)
 
-maxTimestamp = entries[len(entries)-1][0]
-logMaxAllocTime = math.log(maxAllocTime, logBase)
+#maxTimestamp = entries[len(entries)-1][0]
+#logMaxAllocTime = math.log(maxAllocTime, logBase)
+
+# Scatter plot
+if True:
+    from matplotlib.ticker import FuncFormatter
+
+    def x_labels(tick, pos):
+        return f"{tick / 1e9}"
+
+    def y_labels(tick, pos):
+        if tick < 1000:
+            return f"{tick} ns"
+        elif tick < 1000 * 1000:
+            return f"{tick/1000} μs"
+        elif tick < 1000 * 1000 * 1000:
+            return f"{tick/1000/1000} ms"
+        else:
+            return f"{tick/1000/1000/1000} s"
+
+    fig,ax = plt.subplots(1,1, figsize=(16,9))
+    plt.scatter(x=timestamps, y=allocTimes, s=0.1)
+    plt.semilogy(basey=10)
+    ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
+    ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
+    ax.set_ylabel("Malloc Time")
+    ax.set_xlabel("Game time (seconds)")
+    ax.set_title("Doom 3 Memory Analysis - Malloc")
+    plt.show()
 
 # Heatmap
 if False:
