@@ -344,7 +344,7 @@ int main()
             std::cout << "Failed to open: " << filepath << std::endl;
         }
 
-        stream << "timestamp,allocTime\n";
+        stream << "timestamp,allocTime,allocSize\n";
 
         for (auto const& entry : journal) {
             // Only consider allocs
@@ -358,7 +358,7 @@ int main()
             }
 
             // Write timestamp / allocTime
-            stream << entry.timestamp.count() << "," << entry.allocTime.count() << "\n";
+            stream << entry.timestamp.count() << "," << entry.allocTime.count() << "," << entry.allocSize << "\n";
         }
         std::cout << "Write complete" << std::endl;
     }

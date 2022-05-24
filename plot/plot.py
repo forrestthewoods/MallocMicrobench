@@ -4,12 +4,11 @@ import csv
 
 
 # Parse data
-maxAllocTime = 0
-logBase = 10
+maxEntries = 0
 
 timestamps = []
 allocTimes = []
-maxEntries = 0
+allocSizes = []
 with open("alloc_times.csv") as csv_file:
     reader = csv.reader(csv_file)
     
@@ -20,14 +19,20 @@ with open("alloc_times.csv") as csv_file:
     for row in reader:
         timestamp = float(row[0])
         allocTime = float(row[1])
+        allocSize = float(row[2])
         timestamps.append(timestamp)
         allocTimes.append(allocTime)
+        allocSizes.append(allocSize)
         if maxEntries > 0 and len(timestamps) >= maxEntries:
             break
-        #maxAllocTime = max(maxAllocTime, allocTime)
 
-#maxTimestamp = entries[len(entries)-1][0]
-#logMaxAllocTime = math.log(maxAllocTime, logBase)
+# Need to normalize allocSizes to [0,1] for color
+def clamp(v,lo,hi):
+    return max(lo, min(v, hi))
+
+maxAllocSize = max(allocSizes)
+maxLogAllocSize = math.log(maxAllocSize)
+normalizedAllocSizes = [clamp(math.log(alloc)/maxLogAllocSize,0.0,1.0) for alloc in allocSizes]
 
 # Scatter plot
 if True:
@@ -47,7 +52,7 @@ if True:
             return f"{tick/1000/1000/1000} s"
 
     fig,ax = plt.subplots(1,1, figsize=(16,9))
-    plt.scatter(x=timestamps, y=allocTimes, s=0.1)
+    plt.scatter(x=timestamps, y=allocTimes, c=normalizedAllocSizes, s=0.1, cmap='jet')
     plt.semilogy(basey=10)
     ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
     ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
