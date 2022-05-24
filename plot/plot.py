@@ -43,29 +43,33 @@ with open("alloc_times.csv") as csv_file:
 maxTimestamp = entries[len(entries)-1][0]
 logMaxAllocTime = math.log(maxAllocTime, logBase)
 
-# Create 100x100 heatmap
-width = 100
-height = 10
-data = [ [0]*width for i in range(height)]
+# Heatmap
+if False:
+    width = 100
+    height = 10
+    data = [ [0]*width for i in range(height)]
 
-# Convert to grid for heatmap
-for entry in entries:
-    timestamp = entry[0]
-    allocTime = entry[1]
-    logAllocTime = math.log(allocTime,logBase) 
+    # Buckets
+    allocTimeLimit = [30]
 
-    timebucket = min(int(timestamp / maxTimestamp * width), width - 1)
-    allocbucket = min(int(logAllocTime / logMaxAllocTime * height), height - 1)
-    #allocbucket = min(int(allocTime / maxAllocTime * height), height - 1)
+    # Convert to grid for heatmap
+    for entry in entries:
+        timestamp = entry[0]
+        allocTime = entry[1]
+        logAllocTime = math.log(allocTime,logBase) 
 
-    data[allocbucket][timebucket] += 1
+        timebucket = min(int(timestamp / maxTimestamp * width), width - 1)
+        allocbucket = min(int(logAllocTime / logMaxAllocTime * height), height - 1)
+        #allocbucket = min(int(allocTime / maxAllocTime * height), height - 1)
 
-print(f"Max timestamp: {timestamp}")
-print(f"Max alloc time: {maxAllocTime}")
-print(f"Max alloc time (log): {logMaxAllocTime}")
+        data[allocbucket][timebucket] += 1
 
-for row in data:
-    print(row)
+    print(f"Max timestamp: {timestamp}")
+    print(f"Max alloc time: {maxAllocTime}")
+    print(f"Max alloc time (log): {logMaxAllocTime}")
 
-heatmap2d(data)
-#print(data)
+    for row in data:
+        print(row)
+
+    heatmap2d(data)
+    #print(data)
