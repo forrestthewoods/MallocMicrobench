@@ -115,11 +115,11 @@ struct MemoryEntry {
     MemoryOp op = MemoryOp::Alloc;
     uint64_t allocSize = 0; // unused for free
     uint64_t ptr = 0;
-    uint64_t threadId;
-    Nanoseconds timestamp;
+    uint64_t threadId = 0;
+    Nanoseconds timestamp = Nanoseconds{ 0 };
 
     // Output
-    Nanoseconds allocTime;
+    Nanoseconds allocTime = Nanoseconds{ 0 };
 };
 
 std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {

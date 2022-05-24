@@ -44,9 +44,9 @@ maxTimestamp = entries[len(entries)-1][0]
 logMaxAllocTime = math.log(maxAllocTime, logBase)
 
 # Create 100x100 heatmap
-width = 10
+width = 100
 height = 10
-data = [[0] * width] * height
+data = [ [0]*width for i in range(height)]
 
 # Convert to grid for heatmap
 for entry in entries:
@@ -56,7 +56,16 @@ for entry in entries:
 
     timebucket = min(int(timestamp / maxTimestamp * width), width - 1)
     allocbucket = min(int(logAllocTime / logMaxAllocTime * height), height - 1)
+    #allocbucket = min(int(allocTime / maxAllocTime * height), height - 1)
 
-    data[timebucket][allocbucket] += 1
+    data[allocbucket][timebucket] += 1
+
+print(f"Max timestamp: {timestamp}")
+print(f"Max alloc time: {maxAllocTime}")
+print(f"Max alloc time (log): {logMaxAllocTime}")
+
+for row in data:
+    print(row)
 
 heatmap2d(data)
+#print(data)
