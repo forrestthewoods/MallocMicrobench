@@ -4,7 +4,10 @@ from matplotlib.ticker import LogFormatter
 import math
 import csv
 
-maxEntries = 0
+maxEntries = 100000
+csv_filename = "alloc_times_6min_realtimeReplay.csv"
+chart_title = "Doom 3 Memory Analysis - ::malloc - Fullspeed Replay"
+
 
 kilobyte = 1024.0
 megabyte = kilobyte * 1024.0
@@ -40,7 +43,6 @@ class ColorbarFormatter(LogFormatter):
 
 def main():
     # Parse data
-    chart_title = "Doom 3 Memory Analysis - Malloc"
     mallocMax = 100 * megabyte
     mallocMaxLog = math.log(mallocMax)
 
@@ -48,7 +50,8 @@ def main():
     timestamps = []
     allocTimes = []
     allocSizes = []
-    with open("alloc_times.csv") as csv_file:
+    csvData = []
+    with open(csv_filename) as csv_file:
         reader = csv.reader(csv_file)
         
         # skip header
@@ -56,10 +59,13 @@ def main():
 
         # process data
         for row in reader:
-            timestamp = float(row[0])
-            allocTime = float(row[1])
-            allocSize = float(row[2])
-            timestamps.append(timestamp)
+            originalTimestamp = float(row[0])
+            replayTimestamp = float(row[1])
+            allocTime = float(row[2])
+            allocSize = float(row[3])
+            replayFreeTimestamp = float(row[4])
+            freeTime = float(row[5])
+            timestamps.append(replayTimestamp)
             allocTimes.append(allocTime)
             allocSizes.append(allocSize)
             if maxEntries > 0 and len(timestamps) >= maxEntries:
@@ -112,12 +118,13 @@ def main():
         ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
         ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
         ax.set_ylabel("Malloc Time")
-        ax.set_xlabel("Game time (seconds)")
+        ax.set_xlabel("Replay Time (seconds)")
         ax.set_title(chart_title)
         #ax.set_facecolor('#FFF1E6') # financial times
         ax.set_facecolor('#101010')
         #cbar = plt.colorbar()
         cb = plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
+        fig.canvas.manager.full_screen_toggle() # toggle fullscreen mode        
         #cbar = plt.colorbar(ticks=[i for i in range(num_cbar_ticks)])
         #cbar.ax.set_yticklabels(cbar_labels)
 

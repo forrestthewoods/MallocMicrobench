@@ -12,6 +12,9 @@
 
 #pragma intrinsic(__rdtsc)
 
+// Config
+constexpr double replaySpeed = 1.0;
+
 // Forward declarations
 struct RdtscClock;
 
@@ -119,8 +122,10 @@ struct MemoryEntry {
     Nanoseconds originalTimestamp = Nanoseconds{ 0 };
 
     // Output
-    Nanoseconds replayTimestamp = Nanoseconds{ 0 };
+    Nanoseconds replayAllocTimestamp = Nanoseconds{ 0 };
     Nanoseconds allocTime = Nanoseconds{ 0 };
+    Nanoseconds replayFreeTimestamp = Nanoseconds{ 0 };
+    Nanoseconds freeTime = Nanoseconds{ 0 };
 };
 
 std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
@@ -208,9 +213,6 @@ int main()
     }
 
 #if 1
-    // Config
-    constexpr double replaySpeed = 0.0;
-
     // Malloc and Free as fast as possible
     std::unordered_map<uint64_t, std::tuple<void*, uint64_t, size_t>> liveAllocs;
     std::vector<Nanoseconds> allocTimes;
@@ -232,7 +234,7 @@ int main()
     std::cout << "Replay Speed: " << replaySpeed << std::endl;
     std::cout << std::endl;
 
-
+    // Re-play journal performing allocs and frees
     {
         std::cout << "Beginning replay" << std::endl;
 
@@ -280,7 +282,7 @@ int main()
                     Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
                     allocTimes.push_back(mallocTime);
                     entry.allocTime = mallocTime;
-                    entry.replayTimestamp = replayMallocStart - replayStart;
+                    entry.replayAllocTimestamp = replayMallocStart - replayStart;
 
                     // Update counters
                     totalAllocs += 1;
@@ -290,7 +292,7 @@ int main()
                 }
                 else {
                     // multithreaded alloc/free can sometimes have inconsistent timestamps
-                    // we can safely ignore them.
+                    // we can ignore a few without losing critical information.
 
                     /*
                     std::cout << "Failed alloc. Idx: [" << idx << "] Size: [" << entry.allocSize << "]  Ptr: [" << entry.ptr << "] Thread: [" << entry.threadId << "]  time: [" << entry.timestamp << "]" << std::endl;
@@ -306,10 +308,13 @@ int main()
                 // Find ptr
                 auto iter = liveAllocs.find(entry.ptr);
                 if (iter != liveAllocs.end()) {
-                    void* ptr = std::get<0>(iter->second);
-                    uint64_t allocSize = std::get<1>(iter->second);
+                    auto liveAllocTuple = iter->second;
+                    void* ptr = std::get<0>(liveAllocTuple);
+                    uint64_t allocSize = std::get<1>(liveAllocTuple);
+                    size_t allocIdx = std::get<2>(liveAllocTuple);
 
                     // Perform and instrument free
+                    auto replayFreeStart = ReplayClock::now();
                     auto freeStart = Clock::now();
                     ::free(ptr);
                     auto freeEnd = Clock::now();
@@ -320,6 +325,11 @@ int main()
                     // Store free time
                     Nanoseconds freeTime = RdtscClock::ticksToNs(freeEnd - freeStart);
                     freeTimes.push_back(freeTime);
+
+                    // Store some data back in the alloc entry for logging
+                    auto& allocEntry = journal[allocIdx];
+                    allocEntry.replayFreeTimestamp = replayFreeStart - replayStart;
+                    allocEntry.freeTime = freeTime;
 
                     // Update counters
                     totalFrees += 1;
@@ -347,7 +357,7 @@ int main()
             std::cout << "Failed to open: " << filepath << std::endl;
         }
 
-        stream << "originalTimestamp,replayTimestamp,allocTime,allocSize\n";
+        stream << "originalTimestamp,replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime\n";
 
         for (auto const& entry : journal) {
             // Only consider allocs
@@ -360,8 +370,15 @@ int main()
                 continue;
             }
 
-            // Write timestamp / allocTime
-            stream << entry.originalTimestamp.count() << "," << entry.allocTime.count() << "," << entry.allocSize << "\n";
+            // Write data
+            stream 
+                << entry.originalTimestamp.count() << ","
+                << entry.replayAllocTimestamp.count() << ","
+                << entry.allocTime.count() << "," 
+                << entry.allocSize << ","
+                << entry.replayFreeTimestamp.count() << ","
+                << entry.freeTime.count()
+                << "\n";
         }
         std::cout << "Write complete" << std::endl;
     }
