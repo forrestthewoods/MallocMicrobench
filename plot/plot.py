@@ -2,99 +2,125 @@ import matplotlib.pyplot as plt
 import math
 import csv
 
+kilobyte = 1024.0
+megabyte = kilobyte * 1024.0
+gigabyte = megabyte * 1024.0
 
-# Parse data
-maxEntries = 0
+def format_nanoseconds(ns):
+    if ns < 1000:
+        return f"{ns} ns"
+    elif ns < 1000 * 1000:
+        return f"{ns/1000} μs"
+    elif ns < 1000 * 1000 * 1000:
+        return f"{ns/1000/1000} ms"
+    else:
+        return f"{ns/1000/1000/1000} s"
 
-print("Parsing data")
-timestamps = []
-allocTimes = []
-allocSizes = []
-with open("alloc_times.csv") as csv_file:
-    reader = csv.reader(csv_file)
-    
-    # skip header
-    next(reader, None)
+def format_bytes(bytes):
+    if bytes < 1024:
+        return f"{bytes:.0f} bytes"
+    elif bytes < 1024 * 1024:
+        return f"{bytes/1024:.0f} kilobytes"
+    elif bytes < 1024 * 1024 * 1024:
+        return f"{bytes/1024/1024:.2f} megabytes"
+    else:
+        return f"{float(bytes)/1024.0/1024.0/1024.0:.2f} gigabytes"
 
-    # process data
-    for row in reader:
-        timestamp = float(row[0])
-        allocTime = float(row[1])
-        allocSize = float(row[2])
-        timestamps.append(timestamp)
-        allocTimes.append(allocTime)
-        allocSizes.append(allocSize)
-        if maxEntries > 0 and len(timestamps) >= maxEntries:
-            break
-print("Parse Complete\n")
+def main():
+    # Parse data
+    maxEntries = 100000
+    chart_title = "Doom 3 Memory Analysis - Malloc"
+    mallocMax = 50 * megabyte
+    mallocMaxLog = math.log(mallocMax)
 
-# Need to normalize allocSizes to [0,1] for color
-def clamp(v,lo,hi):
-    return max(lo, min(v, hi))
+    print("Parsing data")
+    timestamps = []
+    allocTimes = []
+    allocSizes = []
+    with open("alloc_times.csv") as csv_file:
+        reader = csv.reader(csv_file)
+        
+        # skip header
+        next(reader, None)
 
-maxAllocSize = max(allocSizes)
-maxLogAllocSize = math.log(maxAllocSize)
-print(f"Max alloc size: {maxAllocSize}")
-print(f"Max alloc size: {maxLogAllocSize}")
-normalizedAllocSizes = [clamp(math.log(alloc)/maxLogAllocSize,0.0,1.0) for alloc in allocSizes]
+        # process data
+        for row in reader:
+            timestamp = float(row[0])
+            allocTime = float(row[1])
+            allocSize = float(row[2])
+            timestamps.append(timestamp)
+            allocTimes.append(allocTime)
+            allocSizes.append(allocSize)
+            if maxEntries > 0 and len(timestamps) >= maxEntries:
+                break
+    print("Parse Complete\n")
 
-# Scatter plot
-if True:
-    from matplotlib.ticker import FuncFormatter
+    # Need to normalize allocSizes to [0,1] for color
+    def clamp(v,lo,hi):
+        return max(lo, min(v, hi))
 
-    def x_labels(tick, pos):
-        return f"{tick / 1e9}"
+    #maxAllocSize = max(allocSizes)
+    #maxLogAllocSize = math.log(maxAllocSize)
+    #print(f"Max alloc size: {max(allocSizes)}")
+    #print(f"Max alloc size: {maxLogAllocSize}")
+    #normalizedAllocSizes = [clamp(math.log(min(alloc, maxAllocSize))/maxLogAllocSize,0.0,1.0) for alloc in allocSizes]
 
-    def y_labels(tick, pos):
-        if tick < 1000:
-            return f"{tick} ns"
-        elif tick < 1000 * 1000:
-            return f"{tick/1000} μs"
-        elif tick < 1000 * 1000 * 1000:
-            return f"{tick/1000/1000} ms"
-        else:
-            return f"{tick/1000/1000/1000} s"
+    # Normalize allocSizes to [0,1]
+    # Used fix upper limited that clamped
+    normalizedAllocSizes = [clamp(math.log(min(alloc, mallocMax))/mallocMaxLog,0.0,1.0) for alloc in allocSizes]
 
-    fig,ax = plt.subplots(1,1, figsize=(16,9))
-    plt.scatter(x=timestamps, y=allocTimes, c=normalizedAllocSizes, s=0.1, cmap='jet')
-    plt.semilogy(basey=10)
-    ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
-    ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
-    ax.set_ylabel("Malloc Time")
-    ax.set_xlabel("Game time (seconds)")
-    ax.set_title("Doom 3 Memory Analysis - Malloc")
-    cbar = plt.colorbar()
-    #cbar = plt.colorbar(ticks=[0.2,0.5,1])
-    #cbar.ax.set_yticklabels(['foo', 'bar', 'baz'])
-    plt.show()
+    # Scatter plot
+    if True:
+        from matplotlib.ticker import FuncFormatter
 
-# Heatmap
-if False:
-    width = 100
-    height = 10
-    data = [ [0]*width for i in range(height)]
+        def x_labels(tick, pos):
+            return f"{tick / 1e9}"
 
-    # Buckets
-    allocTimeLimit = [30]
+        def y_labels(tick, pos):
+            return format_nanoseconds(tick)
 
-    # Convert to grid for heatmap
-    for entry in entries:
-        timestamp = entry[0]
-        allocTime = entry[1]
-        logAllocTime = math.log(allocTime,logBase) 
 
-        timebucket = min(int(timestamp / maxTimestamp * width), width - 1)
-        allocbucket = min(int(logAllocTime / logMaxAllocTime * height), height - 1)
-        #allocbucket = min(int(allocTime / maxAllocTime * height), height - 1)
+        fig,ax = plt.subplots(1,1, figsize=(16,9))
+        plt.scatter(x=timestamps, y=allocTimes, c=normalizedAllocSizes, s=0.1, cmap='jet')
+        plt.semilogy(basey=10)
+        ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
+        ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
+        ax.set_ylabel("Malloc Time")
+        ax.set_xlabel("Game time (seconds)")
+        ax.set_title(chart_title)
 
-        data[allocbucket][timebucket] += 1
+        # Define a color bar to provide a third dimension (alloc size)
+        num_cbar_ticks = int(10)
 
-    print(f"Max timestamp: {timestamp}")
-    print(f"Max alloc time: {maxAllocTime}")
-    print(f"Max alloc time (log): {logMaxAllocTime}")
+        print(f"Debug 0: {format_bytes(mallocMax)}")
+        
+        debug = [mallocMax for i in range(num_cbar_ticks)]
+        print(f"Debug 1: {debug}")
 
-    for row in data:
-        print(row)
+        debug = [i for i in range(num_cbar_ticks)]
+        print(f"Debug 2: {debug}")
 
-    heatmap2d(data)
-    #print(data)
+        debug = [0 if i == 0 else i/num_cbar_ticks for i in range(num_cbar_ticks + 1)]
+        print(f"Debug 3: {debug}")
+
+        debug = [0 if i == 0 else i/num_cbar_ticks*mallocMax for i in range(num_cbar_ticks + 1)]
+        print(f"Debug 5: {debug}")
+
+        debug = [0 if i == 0 else math.log(i/num_cbar_ticks*mallocMax) for i in range(num_cbar_ticks + 1)]
+        print(f"Debug 6: {debug}")
+        
+        debug = [format_bytes(b) for b in debug]
+        print(f"Debug 7: {debug}")
+
+        cbar_labels = ["0" if i == 0 else format_bytes(math.log(i*mallocMax)) for i in range(num_cbar_ticks)]
+        print(f"Cbar Labels: {cbar_labels}")
+        #cbar_labels = [str(i) for i in range(num_cbar_ticks)]
+        cbar = plt.colorbar()
+        #cbar = plt.colorbar(ticks=[i for i in range(num_cbar_ticks)])
+        #cbar.ax.set_yticklabels(cbar_labels)
+
+        plt.show()
+
+if __name__=="__main__":
+    main()
+

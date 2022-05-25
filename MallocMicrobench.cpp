@@ -116,9 +116,10 @@ struct MemoryEntry {
     uint64_t allocSize = 0; // unused for free
     uint64_t ptr = 0;
     uint64_t threadId = 0;
-    Nanoseconds timestamp = Nanoseconds{ 0 };
+    Nanoseconds originalTimestamp = Nanoseconds{ 0 };
 
     // Output
+    Nanoseconds replayTimestamp = Nanoseconds{ 0 };
     Nanoseconds allocTime = Nanoseconds{ 0 };
 };
 
@@ -175,7 +176,7 @@ std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
         advancePtrs();
 
         // Parse timepoint
-        entry.timestamp = Nanoseconds{ strtoull(begin, &end, 10) };
+        entry.originalTimestamp = Nanoseconds{ strtoull(begin, &end, 10) };
 
         result.push_back(entry);
     }
@@ -226,7 +227,7 @@ int main()
     using ReplayClock = std::chrono::steady_clock;
     auto replayStart = ReplayClock::now();
 
-    auto replayDuration = std::chrono::nanoseconds{ journal.back().timestamp };
+    auto replayDuration = std::chrono::nanoseconds{ journal.back().originalTimestamp };
     std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
     std::cout << "Replay Speed: " << replaySpeed << std::endl;
     std::cout << std::endl;
@@ -256,7 +257,7 @@ int main()
                     }
 
                     // Spin until replay
-                    if (scaledReplayTime > entry.timestamp) {
+                    if (scaledReplayTime > entry.originalTimestamp) {
                         break;
                     }
                 }
@@ -266,6 +267,7 @@ int main()
                 auto allocSize = entry.allocSize;
 
                 // Perform and instrument malloc
+                auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = Clock::now();
                 auto ptr = ::malloc(entry.allocSize);
                 auto mallocEnd = Clock::now();
@@ -278,6 +280,7 @@ int main()
                     Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
                     allocTimes.push_back(mallocTime);
                     entry.allocTime = mallocTime;
+                    entry.replayTimestamp = replayMallocStart - replayStart;
 
                     // Update counters
                     totalAllocs += 1;
@@ -344,7 +347,7 @@ int main()
             std::cout << "Failed to open: " << filepath << std::endl;
         }
 
-        stream << "timestamp,allocTime,allocSize\n";
+        stream << "originalTimestamp,replayTimestamp,allocTime,allocSize\n";
 
         for (auto const& entry : journal) {
             // Only consider allocs
@@ -358,7 +361,7 @@ int main()
             }
 
             // Write timestamp / allocTime
-            stream << entry.timestamp.count() << "," << entry.allocTime.count() << "," << entry.allocSize << "\n";
+            stream << entry.originalTimestamp.count() << "," << entry.allocTime.count() << "," << entry.allocSize << "\n";
         }
         std::cout << "Write complete" << std::endl;
     }
