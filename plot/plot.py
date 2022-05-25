@@ -7,12 +7,12 @@ import csv
 
 # Config
 maxEntries = 0
-csv_filename = "alloc_times_6min_realtimeReplay.csv"
-chart_title_alloc = "Doom 3 Memory Analysis - ::malloc - Realtime"
-chart_title_free = "Doom 3 Memory Analysis - ::free - Realtime"
+csv_filename = "alloc_times_6min_10xspeed_rpmalloc.csv"
+chart_title_alloc = "Doom 3 Memory Analysis - ::rpmalloc - 10x Speed"
+chart_title_free = "Doom 3 Memory Analysis - ::rpfree - 10x Speed"
 fullscreen = False
 show_alloc_graph = True
-show_free_graph = True
+show_free_graph = False
 
 # Constants
 kilobyte = 1024.0
