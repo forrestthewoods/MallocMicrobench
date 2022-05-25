@@ -1,13 +1,18 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.ticker import FuncFormatter
 from matplotlib.ticker import LogFormatter
 import math
 import csv
 
 # Config
-maxEntries = 100000
+maxEntries = 0
 csv_filename = "alloc_times_6min_realtimeReplay.csv"
-chart_title = "Doom 3 Memory Analysis - ::malloc - Realtime Replay"
+chart_title_alloc = "Doom 3 Memory Analysis - ::malloc - Realtime"
+chart_title_free = "Doom 3 Memory Analysis - ::free - Realtime"
+fullscreen = False
+show_alloc_graph = True
+show_free_graph = True
 
 # Constants
 kilobyte = 1024.0
@@ -49,10 +54,10 @@ def main():
     mallocMaxLog = math.log(mallocMax)
 
     print("Parsing data")
-    timestamps = []
+    allocTimestamps = []
     allocTimes = []
     allocSizes = []
-    csvData = []
+    freeData = []
     with open(csv_filename) as csv_file:
         reader = csv.reader(csv_file)
         
@@ -67,46 +72,31 @@ def main():
             allocSize = float(row[3])
             replayFreeTimestamp = float(row[4])
             freeTime = float(row[5])
-            timestamps.append(replayTimestamp)
+            allocTimestamps.append(replayTimestamp)
             allocTimes.append(allocTime)
             allocSizes.append(allocSize)
-            if maxEntries > 0 and len(timestamps) >= maxEntries:
+            if replayFreeTimestamp != 0:
+                freeData.append((replayFreeTimestamp, freeTime, allocSize))
+            if maxEntries > 0 and len(allocTimestamps) >= maxEntries:
                 break
     print("Parse Complete\n")
 
-    # Need to normalize allocSizes to [0,1] for color
-    def clamp(v,lo,hi):
-        return max(lo, min(v, hi))
+    # Shared plot data
+    def x_labels(tick, pos):
+        return f"{tick / 1e9}"
 
-    # Normalize allocSizes to [0,1]
-    # Used fix upper limited that clamped
-    def normalize_z(v):
-        clamp(math.log(min(v, mallocMax))/mallocMaxLog, 0.0, 1.0)
+    def y_labels(tick, pos):
+        return format_nanoseconds(tick)
 
-    normalizedAllocSizes = [normalize_z(alloc) for alloc in allocSizes]
-    clampedAllocSizes = [min(alloc, mallocMax) for alloc in allocSizes]
+    cbar_ticks = [32,64,128,256,512,kilobyte,kilobyte*10, kilobyte*100, megabyte, megabyte*10, mallocMax]
 
-    # Scatter plot
-    if True:
-        from matplotlib.ticker import FuncFormatter
-
-        def x_labels(tick, pos):
-            return f"{tick / 1e9}"
-
-        def y_labels(tick, pos):
-            return format_nanoseconds(tick)
-
-        def z_labels(tick, pos):
-            return format_bytes(tick)
-
-        cbar_ticks = [32,64,128,256,512,kilobyte,kilobyte*10, kilobyte*100, megabyte, megabyte*10, mallocMax]
-
-
+    # Alloc times
+    if show_alloc_graph:
         fig,ax = plt.subplots(1,1, figsize=(16,9))
         plt.scatter(
-            x=timestamps, 
+            x=allocTimestamps, 
             y=allocTimes,
-            c=clampedAllocSizes, 
+            c=[min(alloc, mallocMax) for alloc in allocSizes], 
             s=0.2, 
             cmap='nipy_spectral', 
             norm=colors.LogNorm(vmin=None,vmax=mallocMax))
@@ -114,13 +104,47 @@ def main():
         ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
         ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
         ax.set_ylabel("Malloc Time")
+        ax.set_ylim(top=1000*1000*2) # 2 milliseconds
         ax.set_xlabel("Replay Time (seconds)")
-        ax.set_title(chart_title)
+        ax.set_title(chart_title_alloc)
         ax.set_facecolor('#101010')
-        cb = plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
-        fig.canvas.manager.full_screen_toggle() # toggle fullscreen mode        
+        plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
+        
+        if fullscreen:
+            fig.canvas.manager.full_screen_toggle()  
 
-        plt.show()
+    # Free times
+    if show_free_graph:
+        # Sort data by free time
+        freeData.sort(key=lambda entry : entry[0])
+
+        # Extract data
+        freeTimestamps = [entry[0] for entry in freeData]
+        freeTimes = [entry[1] for entry in freeData]
+        allocSizes = [min(entry[2], mallocMax) for entry in freeData]
+
+        fig,ax = plt.subplots(1,1, figsize=(16,9))
+        plt.scatter(
+            x=freeTimestamps, 
+            y=freeTimes,
+            c=allocSizes, 
+            s=0.2, 
+            cmap='nipy_spectral', 
+            norm=colors.LogNorm(vmin=None,vmax=mallocMax))
+        plt.semilogy(basey=10)
+        ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
+        ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
+        ax.set_ylabel("Free Time")
+        ax.set_ylim(top=1000*1000*2) # 2 milliseconds
+        ax.set_xlabel("Replay Time (seconds)")
+        ax.set_title(chart_title_free)
+        ax.set_facecolor('#101010')
+        plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
+        
+        if fullscreen:
+            fig.canvas.manager.full_screen_toggle()  
+
+    plt.show()
 
 if __name__=="__main__":
     main()
