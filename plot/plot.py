@@ -6,6 +6,7 @@ import csv
 # Parse data
 maxEntries = 0
 
+print("Parsing data")
 timestamps = []
 allocTimes = []
 allocSizes = []
@@ -25,6 +26,7 @@ with open("alloc_times.csv") as csv_file:
         allocSizes.append(allocSize)
         if maxEntries > 0 and len(timestamps) >= maxEntries:
             break
+print("Parse Complete\n")
 
 # Need to normalize allocSizes to [0,1] for color
 def clamp(v,lo,hi):
@@ -32,6 +34,8 @@ def clamp(v,lo,hi):
 
 maxAllocSize = max(allocSizes)
 maxLogAllocSize = math.log(maxAllocSize)
+print(f"Max alloc size: {maxAllocSize}")
+print(f"Max alloc size: {maxLogAllocSize}")
 normalizedAllocSizes = [clamp(math.log(alloc)/maxLogAllocSize,0.0,1.0) for alloc in allocSizes]
 
 # Scatter plot
@@ -59,6 +63,9 @@ if True:
     ax.set_ylabel("Malloc Time")
     ax.set_xlabel("Game time (seconds)")
     ax.set_title("Doom 3 Memory Analysis - Malloc")
+    cbar = plt.colorbar()
+    #cbar = plt.colorbar(ticks=[0.2,0.5,1])
+    #cbar.ax.set_yticklabels(['foo', 'bar', 'baz'])
     plt.show()
 
 # Heatmap
