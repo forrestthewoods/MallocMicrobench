@@ -130,6 +130,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp" />
+    <ClCompile Include="rpmalloc.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="rpmalloc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

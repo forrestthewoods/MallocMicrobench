@@ -18,5 +18,13 @@
     <ClCompile Include="MallocMicrobench.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rpmalloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="rpmalloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

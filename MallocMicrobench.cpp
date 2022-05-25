@@ -1,3 +1,4 @@
+
 #include <algorithm>
 #include <chrono>
 #include <format>
@@ -12,8 +13,15 @@
 
 #pragma intrinsic(__rdtsc)
 
+#define USE_RPMALLOC 1
+
+#if USE_RPMALLOC
+#include "rpmalloc.h"
+#endif
+
+
 // Config
-constexpr double replaySpeed = 1.0;
+constexpr double replaySpeed = 10.0;
 
 // Forward declarations
 struct RdtscClock;
@@ -59,6 +67,19 @@ std::string formatBytes(uint64_t bytes) {
         return std::format("{:.2f} gigabytes", (double)bytes / 1024 / 1024 / 1024);
     }
 }
+
+
+#if USE_RPMALLOC
+struct Allocator {
+    static void* alloc(size_t size) { return ::rpmalloc(size); }
+    static void free(void* ptr) { ::rpfree(ptr); }
+};
+#else
+struct Allocator {
+    static inline void* alloc(size_t size) { return ::malloc(size); }
+    static inline void free(void* ptr) { ::free(ptr); }
+};
+#endif
 
 struct RdtscClock {
     static uint64_t now() { return __rdtsc(); }
@@ -193,6 +214,13 @@ int main()
 {
     std::cout << "Hello World!" << std::endl << std::endl;
 
+#if USE_RPMALLOC
+    std::cout << "Initializing rpmalloc" << std::endl << std::endl;
+    rpmalloc_initialize();
+#else
+    std::cout << "Using regular malloc" << std::endl << std::endl;
+#endif
+
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
     
     //constexpr const char* logpath = "C:/temp/doom3_memory_startup.txt";
@@ -212,7 +240,6 @@ int main()
         std::cout << "Thread: [" << pair.first << "]  Ops: [" << pair.second << "]" << std::endl;
     }
 
-#if 1
     // Malloc and Free as fast as possible
     std::unordered_map<uint64_t, std::tuple<void*, uint64_t, size_t>> liveAllocs;
     std::vector<Nanoseconds> allocTimes;
@@ -271,7 +298,7 @@ int main()
                 // Perform and instrument malloc
                 auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = Clock::now();
-                auto ptr = ::malloc(entry.allocSize);
+                auto ptr = Allocator::alloc(entry.allocSize);
                 auto mallocEnd = Clock::now();
 
                 // Store pointer in live list
@@ -316,7 +343,7 @@ int main()
                     // Perform and instrument free
                     auto replayFreeStart = ReplayClock::now();
                     auto freeStart = Clock::now();
-                    ::free(ptr);
+                    Allocator::free(ptr);
                     auto freeEnd = Clock::now();
 
                     // Remove pointer from live list
@@ -439,126 +466,12 @@ int main()
     std::cout << "p99.99:  " << formatTime(freeTimes[size_t((float)freeCount * 0.9999f)]) << std::endl;
     std::cout << "p99.999: " << formatTime(freeTimes[size_t((float)freeCount * 0.99999f)]) << std::endl;
     std::cout << "Worst:   " << formatTime(freeTimes[freeCount - 1]) << std::endl << std::endl;
-#else
-
-    // Config
-    constexpr const uint64_t kilobyte = 1024;
-    constexpr const uint64_t megabyte = 1024 * 1024;
-    constexpr const uint64_t gigabyte = 1024 * 1024 * 1024;
-
-    constexpr const size_t minAllocSize = 64;
-    constexpr const size_t maxAllocSize = 8192;
-    constexpr const bool writeByte = false;
-    constexpr const bool clearBytes = true;
-    constexpr const bool freePtrRightAway = false;
-    constexpr const bool sleepBeforeMalloc = false;
-    constexpr const size_t mallocsBeforeSleep = 1;
-    constexpr const bool yieldBeforeMalloc = false;
-    constexpr const long long sleepMilliseconds = 1;
-    constexpr const size_t numIterations = 4;
-
-    constexpr const std::chrono::milliseconds maxAllocTime{ 3000 };
-
-    constexpr const uint64_t maxAllocAmount = 2 * gigabyte;
-
-
-    // RNG
-    std::random_device randomDevice;
-    std::default_random_engine randomEngine(randomDevice());
-    std::uniform_int_distribution<size_t> rng(minAllocSize, maxAllocSize);
-    auto getAllocSize = [&]() -> size_t {
-        return rng(randomEngine);
-    };
-
-    for (size_t i = 0; i < numIterations; ++i) {
-        std::cout << "Iteration: " << i << std::endl;
-
-        // Result data
-        std::vector<long long> mallocTimes;
-        mallocTimes.reserve(4000000);
-        std::vector<void*> pointers;
-        pointers.reserve(4000000);
-        uint64_t allocatedBytes = 0;
-
-        // Loop
-        auto loopStart = Clock::now();
-        while (Clock::ticksToNs(Clock::now() - loopStart) < maxAllocTime && allocatedBytes < maxAllocAmount) {
-            Nanoseconds mallocTime{ 0 };
-
-            size_t allocSize = getAllocSize();
-
-            // Sleep under the assumption that we probably won't get context switched after waking up
-            if (sleepBeforeMalloc && mallocTimes.size() % mallocsBeforeSleep == 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds{ sleepMilliseconds });
-            }
-
-            if (yieldBeforeMalloc) {
-                std::this_thread::yield();
-            }
-
-            auto mallocStart = Clock::now();
-            auto ptr = ::malloc(allocSize);
-            if (writeByte) {
-                auto bytePtr = reinterpret_cast<uint8_t*>(ptr);
-                bytePtr[0] = 42;
-            }
-            if (clearBytes) {
-                std::memset(ptr, 42, allocSize);
-            }
-            mallocTime += Clock::ticksToNs(Clock::now() - mallocStart);
-            allocatedBytes += allocSize;
-
-            if (freePtrRightAway) {
-                ::free(ptr);
-            }
-            else {
-                pointers.push_back(ptr);
-            }
-
-            mallocTimes.push_back(mallocTime.count());
-        }
-
-        // Results
-        std::sort(mallocTimes.begin(), mallocTimes.end());
-        
-        // Debug worst times
-        //auto reverseTimes = mallocTimes;
-        //std::reverse(reverseTimes.begin(), reverseTimes.end());
-
-        size_t mallocCount = mallocTimes.size();
-        long long totalMallocTime = std::accumulate(mallocTimes.begin(), mallocTimes.end(), (long long)0);
-        Nanoseconds totalMallocTimeNs{ totalMallocTime };
-
-        std::cout << "Number of Mallocs:   " << mallocCount << std::endl;
-        std::cout << "Total Allocation:    " << formatBytes(allocatedBytes) << std::endl;
-        std::cout << "Average Allocation:  " << formatBytes(allocatedBytes / mallocCount) << std::endl;
-        std::cout << "Average Malloc Time: " << formatTime(totalMallocTimeNs / mallocCount) << std::endl << std::endl;
-
-        std::cout << "Best:    " << formatTime(mallocTimes[0]) << std::endl;
-        std::cout << "p1:      " << formatTime(mallocTimes[size_t((float)mallocCount * 0.01f)]) << std::endl;
-        std::cout << "p10:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.10f)]) << std::endl;
-        std::cout << "p25:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.25f)]) << std::endl;
-        std::cout << "p50:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.50f)]) << std::endl;
-        std::cout << "p75:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.75f)]) << std::endl;
-        std::cout << "p90:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.90f)]) << std::endl;
-        std::cout << "p95:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.95f)]) << std::endl;
-        std::cout << "p98:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.98f)]) << std::endl;
-        std::cout << "p99:     " << formatTime(mallocTimes[size_t((float)mallocCount * 0.99f)]) << std::endl;
-        std::cout << "p99.9:   " << formatTime(mallocTimes[size_t((float)mallocCount * 0.999f)]) << std::endl;
-        std::cout << "p99.99:  " << formatTime(mallocTimes[size_t((float)mallocCount * 0.9999f)]) << std::endl;
-        std::cout << "p99.999: " << formatTime(mallocTimes[size_t((float)mallocCount * 0.99999f)]) << std::endl;
-        std::cout << "Worst:   " << formatTime(mallocTimes[mallocCount - 1]) << std::endl << std::endl;
-
-        // Free any pointers
-        for (auto* ptr : pointers) {
-            ::free(ptr);
-        }
-        pointers.clear();
-    }
-#endif
 
     std::cout << "Goodbye Cruel World!\n";
 
+#if USE_RPMALLOC
+    rpmalloc_finalize();
+#endif
 }
 
 // TODO
