@@ -4,15 +4,17 @@ from matplotlib.ticker import LogFormatter
 import math
 import csv
 
+# Config
 maxEntries = 100000
 csv_filename = "alloc_times_6min_realtimeReplay.csv"
-chart_title = "Doom 3 Memory Analysis - ::malloc - Fullspeed Replay"
+chart_title = "Doom 3 Memory Analysis - ::malloc - Realtime Replay"
 
-
+# Constants
 kilobyte = 1024.0
 megabyte = kilobyte * 1024.0
 gigabyte = megabyte * 1024.0
 
+# Utilities
 def format_nanoseconds(ns):
     if ns < 1000:
         return f"{ns} ns"
@@ -76,12 +78,6 @@ def main():
     def clamp(v,lo,hi):
         return max(lo, min(v, hi))
 
-    #maxAllocSize = max(allocSizes)
-    #maxLogAllocSize = math.log(maxAllocSize)
-    #print(f"Max alloc size: {max(allocSizes)}")
-    #print(f"Max alloc size: {maxLogAllocSize}")
-    #normalizedAllocSizes = [clamp(math.log(min(alloc, maxAllocSize))/maxLogAllocSize,0.0,1.0) for alloc in allocSizes]
-
     # Normalize allocSizes to [0,1]
     # Used fix upper limited that clamped
     def normalize_z(v):
@@ -120,13 +116,9 @@ def main():
         ax.set_ylabel("Malloc Time")
         ax.set_xlabel("Replay Time (seconds)")
         ax.set_title(chart_title)
-        #ax.set_facecolor('#FFF1E6') # financial times
         ax.set_facecolor('#101010')
-        #cbar = plt.colorbar()
         cb = plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
         fig.canvas.manager.full_screen_toggle() # toggle fullscreen mode        
-        #cbar = plt.colorbar(ticks=[i for i in range(num_cbar_ticks)])
-        #cbar.ax.set_yticklabels(cbar_labels)
 
         plt.show()
 
