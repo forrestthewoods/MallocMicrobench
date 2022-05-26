@@ -3,6 +3,7 @@
 #include <chrono>
 #include <format>
 #include <fstream>
+#include <future>
 #include <intrin.h>
 #include <iostream>
 #include <numeric>
@@ -14,6 +15,7 @@
 #pragma intrinsic(__rdtsc)
 
 #define USE_RPMALLOC 1
+#define THREADED_REPLAY 0
 
 #if USE_RPMALLOC
 #include "rpmalloc.h"
@@ -235,6 +237,7 @@ int main()
     for (auto const& entry : journal) {
         threadOps[entry.threadId] += 1;
     }
+
     std::cout << "Num Unique Journal Threads: " << threadOps.size() << std::endl;
     for (auto const& pair : threadOps) {
         std::cout << "Thread: [" << pair.first << "]  Ops: [" << pair.second << "]" << std::endl;
@@ -264,6 +267,10 @@ int main()
     // Re-play journal performing allocs and frees
     {
         std::cout << "Beginning replay" << std::endl;
+
+#if THREADED_REPLAY
+        size_t numThreads = threadOps.size();
+#else
 
         float nextReplayMarker = 0.1f;
         size_t idx = 0;
@@ -370,6 +377,8 @@ int main()
 
             idx += 1;
         }
+#endif
+
         std::cout << "Replay complete" << std::endl;
         std::cout << std::endl;
     }
