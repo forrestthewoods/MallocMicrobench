@@ -130,10 +130,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp" />
-    <ClCompile Include="rpmalloc.c" />
+    <ClCompile Include="thirdparty\rpmalloc\rpmalloc.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rpmalloc.h" />
+    <ClInclude Include="thirdparty\mimalloc\mimalloc.h" />
+    <ClInclude Include="thirdparty\rpmalloc\rpmalloc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="thirdparty\mimalloc\mimalloc-static.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

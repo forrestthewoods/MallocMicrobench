@@ -13,18 +13,35 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="thirdparty">
+      <UniqueIdentifier>{42da267c-691d-4f05-9cbc-25bd3357754b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\rpmalloc">
+      <UniqueIdentifier>{120f72ab-5abc-4e4c-8791-b86b8fcf8c08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\mimalloc">
+      <UniqueIdentifier>{06a1fdf7-0fcc-4036-9844-e57ad6498990}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rpmalloc.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="thirdparty\rpmalloc\rpmalloc.c">
+      <Filter>thirdparty\rpmalloc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rpmalloc.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="thirdparty\rpmalloc\rpmalloc.h">
+      <Filter>thirdparty\rpmalloc</Filter>
     </ClInclude>
+    <ClInclude Include="thirdparty\mimalloc\mimalloc.h">
+      <Filter>thirdparty\mimalloc</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="thirdparty\mimalloc\mimalloc-static.lib">
+      <Filter>thirdparty\mimalloc</Filter>
+    </Library>
   </ItemGroup>
 </Project>
