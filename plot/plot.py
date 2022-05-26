@@ -4,12 +4,13 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib.ticker import LogFormatter
 import math
 import csv
+import mpl_scatter_density
 
 # Config
 maxEntries = 0
-csv_filename = "alloc_times_6min_10xspeed_rpmalloc.csv"
-chart_title_alloc = "Doom 3 Memory Analysis - ::rpmalloc - 10x Speed"
-chart_title_free = "Doom 3 Memory Analysis - ::rpfree - 10x Speed"
+csv_filename = "alloc_times_6min_realtimeReplay.csv"
+chart_title_alloc = "Doom 3 Memory Analysis - ::malloc - 10x Speed"
+chart_title_free = "Doom 3 Memory Analysis - ::free - 10x Speed"
 fullscreen = False
 show_alloc_graph = True
 show_free_graph = False
@@ -92,23 +93,25 @@ def main():
 
     # Alloc times
     if show_alloc_graph:
-        fig,ax = plt.subplots(1,1, figsize=(16,9))
-        plt.scatter(
+        fig = plt.figure(figsize=(16,9))
+        ax = fig.add_subplot(1,1,1, projection='scatter_density')
+        density = ax.scatter_density(
             x=allocTimestamps, 
             y=allocTimes,
             c=[min(alloc, mallocMax) for alloc in allocSizes], 
-            s=0.2, 
+            #s=0.2, 
             cmap='nipy_spectral', 
             norm=colors.LogNorm(vmin=None,vmax=mallocMax))
         plt.semilogy(basey=10)
         ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
         ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
         ax.set_ylabel("Malloc Time")
-        ax.set_ylim(top=1000*1000*2) # 2 milliseconds
+        ax.set_ylim(bottom=0, top=1000*1000*1) # 1 millisecond
+        ax.set_xlim(left=0)
         ax.set_xlabel("Replay Time (seconds)")
         ax.set_title(chart_title_alloc)
         ax.set_facecolor('#101010')
-        plt.colorbar(ticks=cbar_ticks, format=ColorbarFormatter())
+        fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
         
         if fullscreen:
             fig.canvas.manager.full_screen_toggle()  
@@ -135,7 +138,7 @@ def main():
         ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
         ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
         ax.set_ylabel("Free Time")
-        ax.set_ylim(top=1000*1000*2) # 2 milliseconds
+        ax.set_ylim(bottom=0.01, top=1000*1000*2) # 2 milliseconds
         ax.set_xlabel("Replay Time (seconds)")
         ax.set_title(chart_title_free)
         ax.set_facecolor('#101010')
