@@ -170,6 +170,7 @@ struct MemoryEntry {
     // Intermediate
     int64_t allocIdx = -1; // allocIndex for MemoryOp::Free
     void* replayPtr = nullptr;
+    bool allocated = false;
 
     // Output
     Nanoseconds replayAllocTimestamp = Nanoseconds{ 0 };
@@ -369,7 +370,6 @@ int main()
         size_t numThreads = threadOps.size();
 #else
 
-        float nextReplayMarker = 0.1f;
         size_t idx = 0;
         while (idx < journal.size()) {
             auto& entry = journal[idx];
@@ -382,12 +382,6 @@ int main()
 
                     // Scale replayTime
                     auto scaledReplayTime = Nanoseconds{ long long((double)replayTime.count() * replaySpeed) };
-
-                    double replayFrac = (double)scaledReplayTime.count() / (double)replayDuration.count();
-                    if (replayFrac > nextReplayMarker) {
-                        std::cout << "Replay Progress: " << std::format("{}%  RealTime: {}", (int)(nextReplayMarker * 100.0), formatTime(replayTime)) << std::endl;
-                        nextReplayMarker += 0.1f;
-                    }
 
                     // Spin until replay
                     if (scaledReplayTime > entry.originalTimestamp) {
@@ -409,6 +403,7 @@ int main()
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
                 entry.allocTime = mallocTime;
                 entry.replayAllocTimestamp = replayMallocStart - replayStart;
+                entry.allocated = true;
 
                 // Update counters
                 totalAllocs += 1;
@@ -439,6 +434,7 @@ int main()
                 // Store some data back in the alloc entry for logging
                 allocEntry.replayFreeTimestamp = replayFreeStart - replayStart;
                 allocEntry.freeTime = freeTime;
+                allocEntry.allocated = false;
 
                 // Update counters
                 totalFrees += 1;
