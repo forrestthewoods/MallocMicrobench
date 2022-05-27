@@ -11,9 +11,9 @@ import cmasher as cmr
 maxEntries = 0
 fullscreen = True
 prepare_alloc_graph = True
-prepare_free_graph = True
-show_plot = False
-save_pngs = True
+prepare_free_graph = False
+show_plot = True
+save_pngs = False
 
 # Replays
 replays = {
@@ -32,7 +32,7 @@ replays = {
 }
 
 # Labels
-selected_replay = None # None == All
+selected_replay = "rpmalloc_10x" # None == All
 title_prefix = "Doom 3 Memory Analysis"
 
 # Constants

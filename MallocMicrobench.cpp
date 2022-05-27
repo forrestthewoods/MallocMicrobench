@@ -163,9 +163,13 @@ struct MemoryEntry {
     // Input
     MemoryOp op = MemoryOp::Alloc;
     uint64_t allocSize = 0; // unused for free
-    uint64_t ptr = 0;
+    uint64_t originalPtr = 0;
     uint64_t threadId = 0;
     Nanoseconds originalTimestamp = Nanoseconds{ 0 };
+
+    // Intermediate
+    int64_t allocIdx = -1; // allocIndex for MemoryOp::Free
+    void* replayPtr = 0;
 
     // Output
     Nanoseconds replayAllocTimestamp = Nanoseconds{ 0 };
@@ -219,7 +223,7 @@ std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
 
         // Parse ptr
         //begin = std::find_if(begin, end, [](char c) { return c != '0'; });
-        entry.ptr = strtoull(begin, &end, 16);
+        entry.originalPtr = strtoull(begin, &end, 16);
         advancePtrs();
 
         // Parse threadId
@@ -247,20 +251,80 @@ int main()
 
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
     
+    // Parse log
     std::cout << "Parsing log file: " << logpath << std::endl;
     auto journal = ParseMemoryLog(logpath);
     std::cout << "Parse complete" << std::endl << std::endl;
 
-    // Count threads
-    // TODO: alloc on multiple threads
+    // Compute unique threadIds
     std::unordered_map<uint64_t, size_t> threadOps;
     for (auto const& entry : journal) {
         threadOps[entry.threadId] += 1;
     }
 
-    std::cout << "Num Unique Journal Threads: " << threadOps.size() << std::endl;
-    for (auto const& pair : threadOps) {
-        std::cout << "Thread: [" << pair.first << "]  Ops: [" << pair.second << "]" << std::endl;
+    // Build pairs of alloc/free
+    // Fix-up any alloc/frees whose timing was inconsistent
+    {
+        // originalPtr -> sourceIDX
+        std::unordered_map<uint64_t, size_t> liveAllocs;
+        size_t idx = 0;
+        while (idx < journal.size()) {
+            auto& entry = journal[idx];
+            if (entry.op == MemoryOp::Alloc) {
+                if (!liveAllocs.contains(entry.originalPtr)) {
+                    liveAllocs[entry.originalPtr] = idx;
+                }
+                else {
+                    auto iter = std::find_if(
+                        journal.begin() + idx + 1,
+                        journal.end(),
+                        [&entry](auto const& e) { return e.op == MemoryOp::Free && e.originalPtr == entry.originalPtr; }
+                    );
+
+                    if (iter != journal.end()) {
+                        // Swap elements
+                        size_t idx2 = iter - journal.begin();
+                        std::swap(journal[idx], journal[idx2]);
+
+                        // Continue without increment idx to process the free
+                        continue;
+                    }
+                    else {
+                        // Bad replay data? Re-used address?
+                        std::abort();
+                    }
+                }
+            }
+            else if (entry.op == MemoryOp::Free) {
+                auto iter = liveAllocs.find(entry.originalPtr);
+                if (iter != liveAllocs.end()) {
+                    entry.allocIdx = idx;
+                    liveAllocs.erase(iter);
+                }
+                else {
+                    auto iter = std::find_if(
+                        journal.begin() + idx + 1,
+                        journal.end(),
+                        [&entry](auto const& e) { return e.op == MemoryOp::Alloc && e.originalPtr == entry.originalPtr; }
+                    );
+
+                    if (iter != journal.end()) {
+                        // Swap elements
+                        size_t idx2 = iter - journal.begin();
+                        std::swap(journal[idx], journal[idx2]);
+
+                        // Continue without increment idx to process the free
+                        continue;
+                    }
+                    else {
+                        // Bad replay data? Re-used address?
+                        std::abort();
+                    }
+                }
+            }
+
+            idx += 1;
+        }
     }
 
     // Malloc and Free as fast as possible
@@ -325,12 +389,12 @@ int main()
                 // Perform and instrument malloc
                 auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = Clock::now();
-                auto ptr = Allocator::alloc(entry.allocSize);
+                auto replayPtr = Allocator::alloc(entry.allocSize);
                 auto mallocEnd = Clock::now();
 
                 // Store pointer in live list
-                if (!liveAllocs.contains(entry.ptr)) {
-                    liveAllocs[entry.ptr] = std::tuple(ptr, allocSize, idx);
+                if (!liveAllocs.contains(entry.originalPtr)) {
+                    liveAllocs[entry.originalPtr] = std::tuple(replayPtr, allocSize, idx);
 
                     // Store malloc time
                     Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
@@ -345,7 +409,7 @@ int main()
                     maxLiveAllocBytes = std::max(maxLiveAllocBytes, curLiveBytes);
                 }
                 else {
-                    // multithreaded alloc/free can sometimes have inconsistent timestamps
+                    // source multithreaded alloc/free can sometimes have inconsistent timestamps
                     // we can ignore a few without losing critical information.
 
                     /*
@@ -360,17 +424,17 @@ int main()
             }
             else {
                 // Find ptr
-                auto iter = liveAllocs.find(entry.ptr);
+                auto iter = liveAllocs.find(entry.originalPtr);
                 if (iter != liveAllocs.end()) {
                     auto liveAllocTuple = iter->second;
-                    void* ptr = std::get<0>(liveAllocTuple);
+                    void* replayPtr = std::get<0>(liveAllocTuple);
                     uint64_t allocSize = std::get<1>(liveAllocTuple);
                     size_t allocIdx = std::get<2>(liveAllocTuple);
 
                     // Perform and instrument free
                     auto replayFreeStart = ReplayClock::now();
                     auto freeStart = Clock::now();
-                    Allocator::free(ptr);
+                    Allocator::free(replayPtr);
                     auto freeEnd = Clock::now();
 
                     // Remove pointer from live list
@@ -438,6 +502,8 @@ int main()
         }
         std::cout << "Write complete" << std::endl;
     }
+
+    // Compute data for results
 
     // Results
     std::sort(allocTimes.begin(), allocTimes.end());
