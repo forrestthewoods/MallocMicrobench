@@ -15,8 +15,8 @@
 #pragma intrinsic(__rdtsc)
 
 // Allocator. Pick one
-#define USE_CRT 0
-#define USE_MIMALLOC 1
+#define USE_CRT 1
+#define USE_MIMALLOC 0
 #define USE_RPMALLOC 0
 static_assert(USE_CRT + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
 
@@ -35,7 +35,7 @@ constexpr const char* alloc_name = "rpmalloc";
 
 
 // Config
-constexpr double replaySpeed = 10.0;
+constexpr double replaySpeed = 0.0;
 constexpr const char* logpath = "C:/temp/doom3_memory_foo_level_died.txt";
 
 // Forward declarations
@@ -169,7 +169,7 @@ struct MemoryEntry {
 
     // Intermediate
     int64_t allocIdx = -1; // allocIndex for MemoryOp::Free
-    void* replayPtr = 0;
+    void* replayPtr = nullptr;
 
     // Output
     Nanoseconds replayAllocTimestamp = Nanoseconds{ 0 };
@@ -191,14 +191,6 @@ std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
     }
 
     const std::string space_delimiter = " ";
-
-    /*
-        a 2048 000001BF2B426880 11484 6949200
-        a 1280 000001BF2B429170 11484 7407200
-        a 2560 000001BF2B4296D0 11484 7441000
-        f 000001BF2B429170 11484 7458000
-    */
-
     while (std::getline(file, line)) {
         MemoryEntry entry;
         
@@ -251,10 +243,18 @@ int main()
 
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
     
-    // Parse log
+    // ----------------------------------------------------------------------------------
+    // Step 1: Parse Journal
+    // ----------------------------------------------------------------------------------
     std::cout << "Parsing log file: " << logpath << std::endl;
     auto journal = ParseMemoryLog(logpath);
     std::cout << "Parse complete" << std::endl << std::endl;
+
+
+
+    // ----------------------------------------------------------------------------------
+    // Step 2: Pre-process Journal
+    // ----------------------------------------------------------------------------------
 
     // Compute unique threadIds
     std::unordered_map<uint64_t, size_t> threadOps;
@@ -265,7 +265,10 @@ int main()
     // Build pairs of alloc/free
     // Fix-up any alloc/frees whose timing was inconsistent
     {
-        // originalPtr -> sourceIDX
+        std::cout << "Pre-processing replay entries" << std::endl;
+
+        // originalPtr -> sourceIdx
+        int numFixups = 0;
         std::unordered_map<uint64_t, size_t> liveAllocs;
         size_t idx = 0;
         while (idx < journal.size()) {
@@ -275,6 +278,9 @@ int main()
                     liveAllocs[entry.originalPtr] = idx;
                 }
                 else {
+                    // Uh oh. Replay Journal allocated on an address that already exists
+                    // This _probably_ means the original timestamps came from different
+                    // threads and didn't quite agree
                     auto iter = std::find_if(
                         journal.begin() + idx + 1,
                         journal.end(),
@@ -293,12 +299,14 @@ int main()
                         // Bad replay data? Re-used address?
                         std::abort();
                     }
+
+                    numFixups += 1;
                 }
             }
             else if (entry.op == MemoryOp::Free) {
                 auto iter = liveAllocs.find(entry.originalPtr);
                 if (iter != liveAllocs.end()) {
-                    entry.allocIdx = idx;
+                    entry.allocIdx = iter->second;
                     liveAllocs.erase(iter);
                 }
                 else {
@@ -320,37 +328,42 @@ int main()
                         // Bad replay data? Re-used address?
                         std::abort();
                     }
+
+                    numFixups += 1;
                 }
             }
 
             idx += 1;
         }
+
+        std::cout << "Num Fixups:   " << numFixups << std::endl;
+        std::cout << "Num Leaks:    " << liveAllocs.size() << std::endl;
+        std::cout << "Pre-process complete" << std::endl << std::endl;
     }
 
-    // Malloc and Free as fast as possible
-    std::unordered_map<uint64_t, std::tuple<void*, uint64_t, size_t>> liveAllocs;
-    std::vector<Nanoseconds> allocTimes;
-    std::vector<Nanoseconds> freeTimes;
-    std::vector<std::pair<MemoryEntry, size_t>> failedAllocs;
-    std::vector<std::pair<MemoryEntry, size_t>> failedFrees;
 
+
+    // ----------------------------------------------------------------------------------
+    // Step 3: Re-play Journal
+    // ----------------------------------------------------------------------------------
+
+    // Stats
     int64_t totalAllocs = 0;
     int64_t totalAllocBytes = 0;
     int64_t curLiveBytes = 0;
     int64_t maxLiveAllocBytes = 0;
     int64_t totalFrees = 0;
 
-    using ReplayClock = std::chrono::steady_clock;
-    auto replayStart = ReplayClock::now();
-
-    auto replayDuration = std::chrono::nanoseconds{ journal.back().originalTimestamp };
-    std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
-    std::cout << "Replay Speed: " << replaySpeed << std::endl;
-    std::cout << std::endl;
-
     // Re-play journal performing allocs and frees
     {
         std::cout << "Beginning replay" << std::endl;
+
+        using ReplayClock = std::chrono::steady_clock;
+        auto replayStart = ReplayClock::now();
+
+        auto replayDuration = std::chrono::nanoseconds{ journal.back().originalTimestamp };
+        std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
+        std::cout << "Replay Speed: " << replaySpeed << std::endl;
 
 #if THREADED_REPLAY
         size_t numThreads = threadOps.size();
@@ -389,85 +402,59 @@ int main()
                 // Perform and instrument malloc
                 auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = Clock::now();
-                auto replayPtr = Allocator::alloc(entry.allocSize);
+                entry.replayPtr = Allocator::alloc(entry.allocSize);
                 auto mallocEnd = Clock::now();
 
-                // Store pointer in live list
-                if (!liveAllocs.contains(entry.originalPtr)) {
-                    liveAllocs[entry.originalPtr] = std::tuple(replayPtr, allocSize, idx);
+                // Store malloc time
+                Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
+                entry.allocTime = mallocTime;
+                entry.replayAllocTimestamp = replayMallocStart - replayStart;
 
-                    // Store malloc time
-                    Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
-                    allocTimes.push_back(mallocTime);
-                    entry.allocTime = mallocTime;
-                    entry.replayAllocTimestamp = replayMallocStart - replayStart;
-
-                    // Update counters
-                    totalAllocs += 1;
-                    totalAllocBytes += allocSize;
-                    curLiveBytes += allocSize;
-                    maxLiveAllocBytes = std::max(maxLiveAllocBytes, curLiveBytes);
-                }
-                else {
-                    // source multithreaded alloc/free can sometimes have inconsistent timestamps
-                    // we can ignore a few without losing critical information.
-
-                    /*
-                    std::cout << "Failed alloc. Idx: [" << idx << "] Size: [" << entry.allocSize << "]  Ptr: [" << entry.ptr << "] Thread: [" << entry.threadId << "]  time: [" << entry.timestamp << "]" << std::endl;
-                    size_t existingIdx = std::get<2>(liveAllocs[entry.ptr]);
-                    auto const& existingEntry = journal[existingIdx];
-                    std::cout << "  Existing: Idx: [" << existingIdx << "] Size: [" << existingEntry.allocSize << "]  Ptr: [" << existingEntry.ptr << "] Thread: [" << existingEntry.threadId << "]  time: [" << existingEntry.timestamp << "]" << std::endl;
-                    */
-
-                    failedAllocs.emplace_back(entry, idx);
-                }
+                // Update counters
+                totalAllocs += 1;
+                totalAllocBytes += allocSize;
+                curLiveBytes += allocSize;
+                maxLiveAllocBytes = std::max(maxLiveAllocBytes, curLiveBytes);
             }
             else {
-                // Find ptr
-                auto iter = liveAllocs.find(entry.originalPtr);
-                if (iter != liveAllocs.end()) {
-                    auto liveAllocTuple = iter->second;
-                    void* replayPtr = std::get<0>(liveAllocTuple);
-                    uint64_t allocSize = std::get<1>(liveAllocTuple);
-                    size_t allocIdx = std::get<2>(liveAllocTuple);
-
-                    // Perform and instrument free
-                    auto replayFreeStart = ReplayClock::now();
-                    auto freeStart = Clock::now();
-                    Allocator::free(replayPtr);
-                    auto freeEnd = Clock::now();
-
-                    // Remove pointer from live list
-                    liveAllocs.erase(iter);
-
-                    // Store free time
-                    Nanoseconds freeTime = RdtscClock::ticksToNs(freeEnd - freeStart);
-                    freeTimes.push_back(freeTime);
-
-                    // Store some data back in the alloc entry for logging
-                    auto& allocEntry = journal[allocIdx];
-                    allocEntry.replayFreeTimestamp = replayFreeStart - replayStart;
-                    allocEntry.freeTime = freeTime;
-
-                    // Update counters
-                    totalFrees += 1;
-                    curLiveBytes -= allocSize;
+                // Find alloc
+                auto& allocEntry = journal[entry.allocIdx];
+                if (allocEntry.op != MemoryOp::Alloc || allocEntry.originalPtr != entry.originalPtr) {
+                    // Pre-processing failed
+                    std::abort();
                 }
-                else {
-                    //std::cout << "Failed free. Idx: [" << idx << "] Size: [" << entry.allocSize << "]  Ptr: [" << entry.ptr << "] Thread: [" << entry.threadId << "]  time: [" << entry.timestamp << "]" << std::endl;
-                    failedFrees.emplace_back(entry, idx);
-                }
+
+                void* replayPtr = allocEntry.replayPtr;
+                uint64_t allocSize = allocEntry.allocSize;
+
+                // Perform and instrument free
+                auto replayFreeStart = ReplayClock::now();
+                auto freeStart = Clock::now();
+                Allocator::free(replayPtr);
+                auto freeEnd = Clock::now();
+
+                // Compute free time
+                Nanoseconds freeTime = RdtscClock::ticksToNs(freeEnd - freeStart);
+
+                // Store some data back in the alloc entry for logging
+                allocEntry.replayFreeTimestamp = replayFreeStart - replayStart;
+                allocEntry.freeTime = freeTime;
+
+                // Update counters
+                totalFrees += 1;
+                curLiveBytes -= allocSize;
             }
 
             idx += 1;
         }
 #endif
 
-        std::cout << "Replay complete" << std::endl;
-        std::cout << std::endl;
+        std::cout << "Replay complete" << std::endl << std::endl;
     }
 
-    // Dump results to file
+    // ----------------------------------------------------------------------------------
+    // Step 4: Dump Results to File
+    // ----------------------------------------------------------------------------------
     {
         constexpr const char* filepath = "c:/temp/alloc_times.csv";
         std::cout << "Writing alloc times to: " << filepath << std::endl;
@@ -503,7 +490,23 @@ int main()
         std::cout << "Write complete" << std::endl;
     }
 
+
+
+    // ----------------------------------------------------------------------------------
+    // Step 5: Print Stats
+    // ----------------------------------------------------------------------------------
+    
     // Compute data for results
+    std::vector<Nanoseconds> allocTimes;
+    std::vector<Nanoseconds> freeTimes;
+    for (auto const& entry : journal) {
+        if (entry.op == MemoryOp::Alloc) {
+            allocTimes.push_back(entry.allocTime);
+            if (entry.freeTime.count() != 0) {
+                freeTimes.push_back(entry.freeTime);
+            }
+        }
+    }
 
     // Results
     std::sort(allocTimes.begin(), allocTimes.end());
@@ -524,10 +527,7 @@ int main()
     std::cout << "Max Live Bytes:       " << formatBytes(maxLiveAllocBytes) << std::endl;
     std::cout << "Average Allocation:   " << formatBytes(totalAllocBytes / mallocCount) << std::endl;
     std::cout << "Average Malloc Time:  " << formatTime(totalMallocTimeNs / mallocCount) << std::endl;
-    std::cout << "Num Leaked Allocs:    " << liveAllocs.size() << std::endl;
     std::cout << "Num Leaked Bytes:     " << formatBytes(curLiveBytes) << std::endl;
-    std::cout << "Num Failed Allocs:    " << failedAllocs.size() << std::endl;
-    std::cout << "Num Failed Frees:     " << failedFrees.size() << std::endl;
     std::cout << std::endl;
 
     std::cout << "Alloc Time" << std::endl;
