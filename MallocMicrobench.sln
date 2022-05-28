@@ -7,36 +7,22 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MallocMicrobench", "MallocM
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
+		Debug-CRT|x64 = Debug-CRT|x64
 		Release-CRT|x64 = Release-CRT|x64
-		Release-CRT|x86 = Release-CRT|x86
 		Release-jemalloc|x64 = Release-jemalloc|x64
-		Release-jemalloc|x86 = Release-jemalloc|x86
 		Release-mimalloc|x64 = Release-mimalloc|x64
-		Release-mimalloc|x86 = Release-mimalloc|x86
 		Release-rpmalloc|x64 = Release-rpmalloc|x64
-		Release-rpmalloc|x86 = Release-rpmalloc|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug|x64.ActiveCfg = Debug-CRT|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug|x64.Build.0 = Debug-CRT|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug|x86.ActiveCfg = Debug-CRT|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release|x64.ActiveCfg = Release-rpmalloc|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release|x86.ActiveCfg = Release-rpmalloc|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug-CRT|x64.ActiveCfg = Debug-CRT|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug-CRT|x64.Build.0 = Debug-CRT|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-CRT|x64.ActiveCfg = Release-CRT|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-CRT|x64.Build.0 = Release-CRT|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-CRT|x86.ActiveCfg = Release-CRT|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-jemalloc|x64.ActiveCfg = Release-jemalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-jemalloc|x64.Build.0 = Release-jemalloc|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-jemalloc|x86.ActiveCfg = Release-jemalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-mimalloc|x64.ActiveCfg = Release-mimalloc|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-mimalloc|x86.ActiveCfg = Release-mimalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-rpmalloc|x64.ActiveCfg = Release-rpmalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-rpmalloc|x64.Build.0 = Release-rpmalloc|x64
-		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-rpmalloc|x86.ActiveCfg = Release-rpmalloc|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
