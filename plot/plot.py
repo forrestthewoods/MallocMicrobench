@@ -113,7 +113,6 @@ def main():
 
             # process data
             for row in reader:
-                originalTimestamp = float(row[0])
                 replayTimestamp = float(row[1])
                 allocTime = float(row[2])
                 allocSize = float(row[3])

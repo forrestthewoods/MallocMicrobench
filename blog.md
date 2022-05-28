@@ -4,13 +4,13 @@
 # Profiling Malloc with Doom 3
 # Benchmarking Malloc with Doom 3
 
-This blog post begins the same way as many of my posts. I nerd sniped myself.
+This blog post began the same way as many of my posts. I nerd sniped myself.
 
 I recently read a blog post about a new library for game audio. It repeated a claim that is conventional wisdom in the audio programming world - "you can't allocate or deallocate memory on the audio thread". That's a very strong statement, and I'm not convinced it's correct.
 
 Lately I've been doing quite a bit of audio and audio-like programming lately. My code is reasonably efficient and does pre-allocate quite a bit. However it uses both `malloc` and `mutex`. It also happens to run great and glitch free!
 
-This raises a question: what is the realistic worst-case performance for malloc on a modern machine?
+This raises a question: what is the realistic worst-case performance for `malloc` on a modern machine?
 
 <insert Tim Sweeney tweet>
 https://twitter.com/TimSweeneyEpic/status/1526439480873328640
@@ -19,13 +19,13 @@ https://twitter.com/TimSweeneyEpic/status/1526439480873328640
 
 Talking about performance is hard. What's even the right question here? Is it worst case malloc? 99.9th percentile? Total malloc time per frame? I'm not sure.
 
-Answering the question isn't any easier. The boring answer the same as always, it depends! How much memory are you allocating? How fragmented are you? What is your program's allocation pattern? What is your system doing? Are you a long lived server or short lived game? It always depends.
+Answering the question is even harder. The boring answer the same as always, it depends! How big is your allocation? How fragmented are you? What is your program's allocation pattern? Is it multi-threaded? What is your system doing? Are you a long lived server or short lived game? It always depends.
 
 Allocating memory isn't free. But neither is time spent on complex systems full of error prone lockless programming. My spidey sense suggests `malloc` is cheaper than people realize.
 
-For today I'm focused on games. Modern games run primarily between 60 and 144 frames per second. One frame at 144Hz is about 7 milliseconds. That's not a lot of time! Except I know for a fact that most games hit the allocator hard. Worst case in theory sets my computer on fire. But what is it in practice?
+For today I'm focused on games. Modern games run between 60 and 144 frames per second. One frame at 144Hz is about 7 milliseconds. That's not a lot of time! Except I know for a fact that most games hit the allocator hard. Worst case in theory sets my computer on fire. But what is it in practice?
 
-My goal isn't to come up with a singular, definitive answer. I'm a big fan of napkin math. There's a famous list of numbers called [Numbers Every Programmer Should Know](https://gist.github.com/jboner/2841832). I want similar numbers for `malloc`. I want a rough estimate of when `malloc` will cause me to miss my target framerate.
+My goal isn't to come up with a singular, definitive answer. I'm a big fan of napkin math. I want a rough estimate of when `malloc` will cause me to miss my target framerate.
 
 # Creating a Journal
 
@@ -75,9 +75,9 @@ a 3840 0000023101F2B260 15888 1202200
 f 0000023101F298A0 15888 1207900
 ```
 
-All content for the rest of this post is derived from the same journal. Its a 315 Mb file contain over 8,000,000 lines. Roughly 4 million `mallocs` and 4 million `frees`. It leaks 4 megabytes from 4538 `mallocs`, tsk tsk.
+All content for the rest of this post is derived from the same journal. Its a 315 Mb file containing over 8,000,000 lines. Roughly 4 million `mallocs` and 4 million `frees`. It leaks 4 megabytes from 4538 `mallocs`, tsk tsk.
 
-My run lasts about 6 minutes. I entered the main menu, selected a level, played for 5 minutes, died, returned to main menu, and quit to desktop. I did this a few times and each run appeared to produce very similar result.
+The journal covers 6 minutes of game time. I entered the main menu, selected a level, played for ~5 minutes, died, returned to main menu, and quit to desktop. I did this a few times and each run appeared to produce very similar journals.
 
 # Replaying the Journal
 Next, we need to write code to load and replay the journal. To do this I created a new C++ project called `MallocMicrobench`. The code is very roughly:
@@ -85,7 +85,7 @@ Next, we need to write code to load and replay the journal. To do this I created
 ```cpp
 std::vector<Entry> journal = ParseJournal("doom3_journal.txt");
 for (auto& entry : journal) {
-    // Spin until time
+    // Spin until journal time
     while (ReplayClock::now() < entry.timepoint) {}
 
     if (entry.op == Alloc) {
@@ -100,16 +100,18 @@ for (auto& entry : journal) {
 }
 ```
 
-There's a fair amount of bookkeeping to track pointers and gather stats. The basic idea is pretty simple.
+This snippet excludes configuration and bookkeeping. The basic idea is very simple.
 
-Running this new replay system produces the following output:
+Running my journal through the new replay system produces the following output:
+
+TODO: update
 
 ```
 Parsing log file: C:/temp/doom3_journal.txt
 Parse complete
 
-Beginning replay
 Replay Duration: 325.93 seconds
+Beginning replay
 Replay complete
 
 == Replay Results ==
@@ -154,36 +156,36 @@ p99.999: 49.02 microseconds
 Worst:   1.17 milliseconds
 ```
 
-Interesting! Average `malloc` time is just 45 nanoseconds. Not bad. However p99.9 is 2.67 microseconds. That's 1 in 1000. Worst case is a whopping 230 microseconds, ouch! `free` is similar, but with a shockingly bad worst case performance of 1.17 milliseconds. Yikes! 
+Interesting! Average `malloc` time is just 45 nanoseconds. Pretty good. However p99.9 is 2.67 microseconds. That's 1 in 1000. Worst case is a whopping 230 microseconds, ouch! `free` is similar, but with a shockingly bad worst case performance of 1.17 milliseconds. Yikes! 
 
-What does this mean for hitting a stable 60Hz or 144Hz? Honestly, it's hard to tell! There's a ton of variance. Are the slow allocations because of very large allocations? Do they have only during a loading screen or in the middle of gameplay? Maybe outliers are due to context switches? We don't have enough information.
+What does this mean for hitting a stable 60Hz or 144Hz? Honestly, I don't know. There's a ton of variance. Are the slow allocations because of very large allocations? Do slow allocs occur only during a loading screen or also in the middle of gameplay? Are extreme outliers due to OS context switches? We don't have enough information.
 
 # Visualizing the Journal
 
-To visualize the data we need to take `doom3_journal.txt`, run a replay, and then produce a new `doom3_replayreport.csv` file. It adds replay timestamps and replay profile time for `malloc` and `free`. `free` data is stored adjacent to `alloc` data so it only has 4 million rows. It looks like this:
+To visualize the data we need to take `doom3_journal.txt`, run a replay, and then produce a new `doom3_replayreport.csv`. It adds replay timestamps and replay profile time for `malloc` and `free`. `free` data is stored adjacent to `alloc` data so it only has 4 million rows. It looks like this:
 
 
 ```csv
-originalTimestamp,replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime
-542200,895900,392,2048,0,0
-1098100,896500,214,1280,897100,480
-1130500,896800,202,2560,897800,208
-1146900,897600,160,3840,0,0
-1171200,898100,171,1280,898500,143
-1189500,898300,141,2560,903200,145
-1202200,898700,4487,3840,0,0
-1236300,903400,191,3760,596526100,247
-1255100,903600,1207,3760,596526300,227
-1259000,904900,1205,3760,596526600,107
+replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime
+895900,392,2048,0,0
+896500,214,1280,897100,480
+896800,202,2560,897800,208
+897600,160,3840,0,0
+898100,171,1280,898500,143
+898300,141,2560,903200,145
+898700,4487,3840,0,0
+903400,191,3760,596526100,247
+903600,1207,3760,596526300,227
+904900,1205,3760,596526600,107
 ```
 
 To better understand the data I decided to build a visualization using Python's [matplotlib](https://matplotlib.org/).
 
-My first attempt was a heatmap. This did not go well and was not useful. I soon tried a scatterplot. This worked out great. Python is a miserably slow language so rendering 8 million points took over 30 seconds. Yikes!
+My first attempt was a heatmap. This did not go well and was not useful. I soon tried a scatterplot. This worked out great. Unfortunately, Python is a miserably slow language so rendering 8 million points took over 30 seconds. Yikes!
 
-A kind Twitter user pointed me towards a matplotlib extension called [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density). This worked phenomenally well and turned 40 seconds into 3 seconds. My biggest bottleneck is actually parsing 8 million rows. 
+A kind Twitter user pointed me towards a matplotlib extension called [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density). This worked phenomenally well and turned 40 seconds into 3 seconds. My biggest bottleneck is actually csv parsing. 
 
-Very quickly I produced this:
+New tools in tow I produced this:
 
 <insert screenshot of crt malloc>
 <include button to toggle between malloc and free>

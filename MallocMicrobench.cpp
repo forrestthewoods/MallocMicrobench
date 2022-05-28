@@ -485,7 +485,7 @@ int main()
             std::cout << "Failed to open: " << filepath << std::endl;
         }
 
-        stream << "originalTimestamp,replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime\n";
+        stream << "replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime\n";
 
         for (auto const& entry : journal) {
             // Only consider allocs
@@ -500,7 +500,6 @@ int main()
 
             // Write data
             stream 
-                << entry.originalTimestamp.count() << ","
                 << entry.replayAllocTimestamp.count() << ","
                 << entry.allocTime.count() << "," 
                 << entry.allocSize << ","
@@ -536,6 +535,18 @@ int main()
     std::sort(freeTimes.begin(), freeTimes.end());
     size_t freeCount = freeTimes.size();
 
+    // Compute median alloc size
+    std::vector<size_t> allocSizes;
+    allocSizes.reserve(mallocCount);
+    for (auto const& entry : journal) {
+        if (entry.op == MemoryOp::Alloc) {
+            allocSizes.push_back(entry.allocSize);
+        }
+    }
+    auto medianIter = allocSizes.begin() + allocSizes.size() / 2;
+    std::nth_element(allocSizes.begin(), medianIter, allocSizes.end());
+    size_t medianAllocSize = *medianIter;
+
     Nanoseconds totalMallocTimeNs{ 0 };
     for (auto const& allocTime : allocTimes) {
         totalMallocTimeNs += allocTime;
@@ -547,6 +558,7 @@ int main()
     std::cout << "Total Allocation:     " << formatBytes(totalAllocBytes) << std::endl;
     std::cout << "Max Live Bytes:       " << formatBytes(maxLiveAllocBytes) << std::endl;
     std::cout << "Average Allocation:   " << formatBytes(totalAllocBytes / mallocCount) << std::endl;
+    std::cout << "Median Allocation:   " << formatBytes(medianAllocSize) << std::endl;
     std::cout << "Average Malloc Time:  " << formatTime(totalMallocTimeNs / mallocCount) << std::endl;
     std::cout << "Num Leaked Bytes:     " << formatBytes(curLiveBytes) << std::endl;
     std::cout << std::endl;
