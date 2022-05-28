@@ -73,6 +73,7 @@ struct Allocator {
     static inline void* alloc(size_t size) { return ::malloc(size); }
     static inline void free(void* ptr) { ::free(ptr); }
     static constexpr const char* name = "crt";
+};
 #elif USE_JEMALLOC
 struct Allocator {
     static void* alloc(size_t size) { return je_malloc(size); }
