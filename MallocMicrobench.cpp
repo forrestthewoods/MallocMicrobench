@@ -17,20 +17,21 @@
 
 // Allocator. Pick exactly one.
 #define USE_CRT 0
-#define USE_MIMALLOC 1
+#define USE_MIMALLOC 0
 #define USE_RPMALLOC 0
-static_assert(USE_CRT + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
+#define USE_JEMALLOC 1
+static_assert(USE_CRT + USE_MIMALLOC + USE_RPMALLOC + USE_JEMALLOC == 1, "Must pick exactly one allocator");
 
 #if USE_CRT
 #include <stdlib.h>
-constexpr const char* alloc_name = "crt";
+#elif USE_JEMALLOC
+#include "thirdparty/jemalloc/include/jemalloc.h"
 #elif USE_MIMALLOC
 // Requires precompiled static lib
 #include "thirdparty/mimalloc/mimalloc.h"
-constexpr const char* alloc_name = "mimalloc";
 #elif USE_RPMALLOC
 #include "thirdparty/rpmalloc/rpmalloc.h"
-constexpr const char* alloc_name = "rpmalloc";
+
 #endif
 
 // If 0 then all mallocs/free on single thread
@@ -57,6 +58,11 @@ struct Allocator {
     static inline void* alloc(size_t size) { return ::malloc(size); }
     static inline void free(void* ptr) { ::free(ptr); }
     static constexpr const char* name = "crt";
+#elif USE_JEMALLOC
+struct Allocator {
+    static void* alloc(size_t size) { return je_malloc(size); }
+    static void free(void* ptr) { je_free(ptr); }
+    static constexpr const char* name = "jemalloc";
 };
 #elif USE_MIMALLOC
 struct Allocator {

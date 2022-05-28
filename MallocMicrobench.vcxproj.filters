@@ -22,6 +22,9 @@
     <Filter Include="thirdparty\mimalloc">
       <UniqueIdentifier>{06a1fdf7-0fcc-4036-9844-e57ad6498990}</UniqueIdentifier>
     </Filter>
+    <Filter Include="thirdparty\jemalloc">
+      <UniqueIdentifier>{6bdfa8b4-cd00-4bdc-849d-f88e33e5c01a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp">
@@ -38,10 +41,21 @@
     <ClInclude Include="thirdparty\mimalloc\mimalloc.h">
       <Filter>thirdparty\mimalloc</Filter>
     </ClInclude>
+    <ClInclude Include="thirdparty\jemalloc\jemalloc.h">
+      <Filter>thirdparty\jemalloc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="thirdparty\mimalloc\mimalloc-static.lib">
       <Filter>thirdparty\mimalloc</Filter>
     </Library>
+    <Library Include="thirdparty\jemalloc\lib\jemalloc.lib">
+      <Filter>thirdparty\jemalloc</Filter>
+    </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="thirdparty\jemalloc\lib\jemalloc.dll">
+      <Filter>thirdparty\jemalloc</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>
