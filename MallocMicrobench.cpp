@@ -55,7 +55,8 @@ static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must p
 
 // Config
 constexpr double replaySpeed = 0.0;
-constexpr const char* logpath = "C:/temp/doom3_memory_foo_level_died.txt";
+constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
+constexpr const char* resultDir = "c:/temp/";
 
 // Typedefs
 using Nanoseconds = std::chrono::nanoseconds;
@@ -155,8 +156,8 @@ int main()
     // ----------------------------------------------------------------------------------
     // Step 1: Parse Journal
     // ----------------------------------------------------------------------------------
-    std::cout << "Parsing log file: " << logpath << std::endl;
-    auto journal = MemoryEntry::ParseJournal(logpath);
+    std::cout << "Parsing log file: " << journalPath << std::endl;
+    auto journal = MemoryEntry::ParseJournal(journalPath);
     std::cout << "Parse complete" << std::endl << std::endl;
 
 
@@ -452,7 +453,31 @@ int main()
     // Step 4: Dump Results to File
     // ----------------------------------------------------------------------------------
     {
-        constexpr const char* filepath = "c:/temp/alloc_times.csv";
+        std::string speedStr;
+        if (replaySpeed == 0) {
+            speedStr = "MaxSpeed";
+        }
+        else if (replaySpeed == 1.0) {
+            speedStr = "1x";
+        }
+        else if (replaySpeed == 10.0) {
+            speedStr = "10x";
+        }
+        else {
+            speedStr = "UnknownSpeed";
+        }
+
+#if THREADED_REPLAY
+        std::string threadStr = "MultiThread";
+#else
+        std::string threadStr = "SingleThread";
+#endif
+
+        std::string filepath = std::format("{}doom3_replayreport_{}_{}_{}.csv", 
+            resultDir,
+            Allocator::name,
+            speedStr,
+            threadStr);
         std::cout << "Writing alloc times to: " << filepath << std::endl;
 
         std::ofstream stream(filepath);

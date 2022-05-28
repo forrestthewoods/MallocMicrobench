@@ -160,6 +160,23 @@ What does this mean for hitting a stable 60Hz or 144Hz? Honestly, it's hard to t
 
 # Visualizing the Journal
 
+To visualize the data we need to take `doom3_journal.txt`, run a replay, and then produce a new `doom3_replayreport.csv` file. It adds replay timestamps and replay profile time for `malloc` and `free`. `free` data is stored adjacent to `alloc` data so it only has 4 million rows. It looks like this:
+
+
+```csv
+originalTimestamp,replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime
+542200,895900,392,2048,0,0
+1098100,896500,214,1280,897100,480
+1130500,896800,202,2560,897800,208
+1146900,897600,160,3840,0,0
+1171200,898100,171,1280,898500,143
+1189500,898300,141,2560,903200,145
+1202200,898700,4487,3840,0,0
+1236300,903400,191,3760,596526100,247
+1255100,903600,1207,3760,596526300,227
+1259000,904900,1205,3760,596526600,107
+```
+
 To better understand the data I decided to build a visualization using Python's [matplotlib](https://matplotlib.org/).
 
 My first attempt was a heatmap. This did not go well and was not useful. I soon tried a scatterplot. This worked out great. Python is a miserably slow language so rendering 8 million points took over 30 seconds. Yikes!
@@ -183,6 +200,8 @@ Data visualization is story telling. What story
 ## Hardware Setup
 All tests were run on a Windows 10 desktop with i7-8700k and 32Gb of RAM. My computer was not doing any obvious work. However I did not close every background application to produce the fastest possible result. My computer was in a state typical for playing games.
 
+I have not tested macOS or Linux. The replay code will require a few changes to work on other platforms.
+
 ## Quake 2
 I actually tried Quake 2 before Doom 3. Unfortunately it's too efficient and has virtually no calls to `malloc` once a level has loaded!
 
@@ -192,7 +211,7 @@ The one exception, `malloc` is called every single frame on player input. You ca
 ## Using RDTSC
 `std::chrono` clocks have a maximum precision of 100 nanoseconds. My initial replay system used `std::chrono::high_resolution_clock` and my report produced malloc times of either 0ns or 100ns. This is clearly insufficient for what I'm attempting to measure.
 
-Using RDTSC is tricky. The conversion from ticks to nanoseconds requires procedurally measuring RDTSC against another timer. I performed twenty 5-millisecond spins to calibrate. The result does vary. My i7-8700k machine 
+Using RDTSC is tricky. The conversion from ticks to nanoseconds requires procedurally measuring RDTSC against another timer. I performed twenty 5-millisecond spins to calibrate. The result does vary. My i7-8700k machine computes 0.270564 nanoseconds per tick. The inverse of which almost perfectly matches my 3.7 GHz CPU.
 
 
 # TODO

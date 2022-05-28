@@ -8,8 +8,8 @@ import mpl_scatter_density
 import cmasher as cmr
 
 # Config
-maxEntries = 0
-fullscreen = True
+maxEntries = 0 # 0 = All
+fullscreen = False
 prepare_alloc_graph = True
 prepare_free_graph = False
 show_plot = True
@@ -17,6 +17,14 @@ save_pngs = False
 
 # Replays
 replays = {
+    "crt_0x_single": {
+        "csv_filename" : "doom3_replayreport_crt_MaxSpeed_SingleThread.csv",
+        "chart_title" : "CRT - Maximum Speed - SingleThreaded",
+    },
+    "crt_0x_multi": {
+        "csv_filename" : "doom3_replayreport_crt_MaxSpeed_MultiThread.csv",
+        "chart_title" : "CRT - Maximum Speed - MultiThreaded",
+    },
     "crt_1x": {
         "csv_filename" : "alloc_times_6min_realtimeReplay.csv",
         "chart_title" : "CRT - 1x Speed",
@@ -31,8 +39,11 @@ replays = {
     }
 }
 
+# Replays to process
+# None = All
+selected_replays = ["crt_0x_single", "crt_0x_multi"]
+
 # Labels
-selected_replay = "rpmalloc_10x" # None == All
 title_prefix = "Doom 3 Memory Analysis"
 
 # Constants
@@ -73,7 +84,7 @@ def main():
     # Parse data
     mallocMax = 100 * megabyte
 
-    replays_to_process = [selected_replay] if selected_replay != None else replays.keys()
+    replays_to_process = selected_replays if selected_replays != None else replays.keys()
 
     for replay in replays_to_process:
 
@@ -122,7 +133,7 @@ def main():
 
         # Alloc times
         if prepare_alloc_graph:
-            fig = plt.figure(figsize=(24,13.5))
+            fig = plt.figure(figsize=(20,11.25))
             ax = fig.add_subplot(1,1,1, projection='scatter_density')
             density = ax.scatter_density(
                 x=allocTimestamps, 
@@ -157,7 +168,7 @@ def main():
             freeTimes = [entry[1] for entry in freeData]
             allocSizes = [min(entry[2], mallocMax) for entry in freeData]
 
-            fig = plt.figure(figsize=(24,13.5))
+            fig = plt.figure(figsize=(20,11.25))
             ax = fig.add_subplot(1,1,1, projection='scatter_density')
             density = ax.scatter_density(
                 x=freeTimestamps, 
@@ -182,8 +193,8 @@ def main():
                 save_filename = csv_filename[:-4] + "_free.png"
                 fig.savefig(f"screenshots/{save_filename}")
 
-        if show_plot:
-            plt.show()
+    if show_plot:
+        plt.show()
 
 if __name__=="__main__":
     main()
