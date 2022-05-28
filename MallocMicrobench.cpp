@@ -54,7 +54,7 @@ static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must p
 #define THREADED_REPLAY 1
 
 // Config
-constexpr double replaySpeed = 0.0;
+constexpr double replaySpeed = 10.0;
 constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
 constexpr const char* resultDir = "c:/temp/";
 
@@ -432,7 +432,7 @@ int main()
         }
 
 #else
-
+        replayStart = ReplayClock::now();
         for (size_t idx = 0; idx < journal.size(); ++idx){
             auto& entry = journal[idx];
 

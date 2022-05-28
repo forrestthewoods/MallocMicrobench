@@ -29,6 +29,14 @@ replays = {
         "csv_filename" : "alloc_times_6min_realtimeReplay.csv",
         "chart_title" : "CRT - 1x Speed",
     },
+    "crt_10x_single": {
+        "csv_filename" : "doom3_replayreport_crt_10x_SingleThread.csv",
+        "chart_title" : "CRT - 10x Speed - SingleThreaded",
+    },
+    "crt_10x_multi": {
+        "csv_filename" : "doom3_replayreport_crt_10x_MultiThread.csv",
+        "chart_title" : "CRT - 10x Speed - MultiThreaded",
+    },
     "mimalloc_10x" : {
         "csv_filename" : "alloc_times_6min_10xspeed_mimalloc.csv",
         "chart_title" : "mimalloc - 10x Speed",
@@ -41,7 +49,7 @@ replays = {
 
 # Replays to process
 # None = All
-selected_replays = ["crt_0x_single", "crt_0x_multi"]
+selected_replays = ["crt_0x_single", "crt_0x_multi", "crt_10x_single", "crt_10x_multi"]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
