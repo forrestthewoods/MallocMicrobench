@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -14,18 +15,17 @@
 
 #pragma intrinsic(__rdtsc)
 
-// Allocator. Pick one
-#define USE_CRT 1
-#define USE_MIMALLOC 0
+// Allocator. Pick exactly one.
+#define USE_CRT 0
+#define USE_MIMALLOC 1
 #define USE_RPMALLOC 0
 static_assert(USE_CRT + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
-
-#define THREADED_REPLAY 0
 
 #if USE_CRT
 #include <stdlib.h>
 constexpr const char* alloc_name = "crt";
 #elif USE_MIMALLOC
+// Requires precompiled static lib
 #include "thirdparty/mimalloc/mimalloc.h"
 constexpr const char* alloc_name = "mimalloc";
 #elif USE_RPMALLOC
@@ -33,57 +33,25 @@ constexpr const char* alloc_name = "mimalloc";
 constexpr const char* alloc_name = "rpmalloc";
 #endif
 
+// If 0 then all mallocs/free on single thread
+// If 1 then perform malloc/free on source defined thread
+#define THREADED_REPLAY 1
 
 // Config
 constexpr double replaySpeed = 0.0;
 constexpr const char* logpath = "C:/temp/doom3_memory_foo_level_died.txt";
 
-// Forward declarations
-struct RdtscClock;
-
 // Typedefs
-//using Clock = std::chrono::steady_clock;
-using Clock = RdtscClock;
 using Nanoseconds = std::chrono::nanoseconds;
 using Microseconds = std::chrono::microseconds;
 using Milliseconds = std::chrono::milliseconds;
 
-std::string formatTime(Nanoseconds ns) {
-    auto count = ns.count();
-    if (count < 1000) {
-        return std::format("{} nanoseconds", count);
-    }
-    else if (count < 1000 * 1000) {
-        return std::format("{:.2f} microseconds", (double)count / 1000);
-    }
-    else if (count < 1000 * 1000 * 1000) {
-        return std::format("{:.2f} milliseconds", (double)count / 1000 / 1000);
-    }
-    else {
-        return std::format("{:.2f} seconds", (double)count / 1000 / 1000 / 1000);
-    }
-}
+// Forward declarations
+std::string formatTime(Nanoseconds ns);
+std::string formatTime(long long ns);
+std::string formatBytes(uint64_t bytes);
 
-std::string formatTime(long long ns) {
-    return formatTime(Nanoseconds{ ns });
-}
-
-std::string formatBytes(uint64_t bytes) {
-    if (bytes < 1024) {
-        return std::format("{} bytes", bytes);
-    } 
-    else if (bytes < 1024 * 1024) {
-        return std::format("{} kilobytes", bytes / 1024);
-    }
-    else  if (bytes < 1024 * 1024 * 1024) {
-        return std::format("{} megabytes", bytes / 1024 / 1024);
-    }
-    else {
-        return std::format("{:.2f} gigabytes", (double)bytes / 1024 / 1024 / 1024);
-    }
-}
-
-
+// Define allocator implementation
 #if USE_CRT
 struct Allocator {
     static inline void* alloc(size_t size) { return ::malloc(size); }
@@ -106,52 +74,11 @@ struct Allocator {
 #error Could not pick allocator
 #endif
 
+// Compute high-precision nanosecond locks via rdtsc
 struct RdtscClock {
-    static uint64_t now() { return __rdtsc(); }
-
-    static double nsPerTick() {
-        static double nsPerTick = []() -> double {
-            constexpr int intervalMs = 5;
-            auto intervalNs = std::chrono::duration_cast<Nanoseconds>(Milliseconds{ intervalMs });
-            constexpr size_t numIntervals = 20;
-
-            // Run some samples
-            std::vector<uint64_t> ticks;
-            for (size_t i = 0; i < numIntervals; ++i) {
-                auto chronoStart = std::chrono::high_resolution_clock::now();
-                auto rdtscStart = RdtscClock::now();
-                decltype(chronoStart) chronoEnd;
-                do {
-                    chronoEnd = std::chrono::high_resolution_clock::now();
-                } while ((chronoEnd - chronoStart) < intervalNs);
-                auto rdtscEnd = RdtscClock::now();
-                ticks.push_back(rdtscEnd - rdtscStart);
-            }
-
-            // Sort results 
-            std::sort(ticks.begin(), ticks.end(), std::greater<uint64_t>());
-
-            // Remove slowest (fewest ticks)
-            ticks.pop_back();
-
-            uint64_t sum = std::accumulate(ticks.begin(), ticks.end(), uint64_t{ 0 });
-            double avgTicksPerInterval = (double)sum / (double)ticks.size();
-            double avgNsPerTick = (double)intervalNs.count() / avgTicksPerInterval;
-
-            // Debug spew
-            //std::cout << "Fastest nsPerTick: " << (double)intervalNs.count() / (double)ticks.front() << std::endl;
-            //std::cout << "Median nsPerTick: " << (double)intervalNs.count() / (double)ticks[ticks.size() / 2] << std::endl;
-            //std::cout << "Slowest nsPerTick: " << (double)intervalNs.count() / (double)ticks.back() << std::endl;
-
-            return avgNsPerTick;
-        }();
-
-        return nsPerTick;
-    }
-
-    static Nanoseconds ticksToNs(uint64_t ticks) {
-        return Nanoseconds{ int64_t((double)ticks * nsPerTick()) };
-    }
+    static uint64_t now();
+    static double nsPerTick();
+    static Nanoseconds ticksToNs(uint64_t ticks);
 };
 
 enum MemoryOp {
@@ -159,6 +86,8 @@ enum MemoryOp {
     Free
 };
 
+// jack-of-all-trades struct for memory journal
+// contains both input and output because it makes things easy to track and report
 struct MemoryEntry {
     // Input
     MemoryOp op = MemoryOp::Alloc;
@@ -167,88 +96,45 @@ struct MemoryEntry {
     uint64_t threadId = 0;
     Nanoseconds originalTimestamp = Nanoseconds{ 0 };
 
-    // Intermediate
-    int64_t allocIdx = -1; // allocIndex for MemoryOp::Free
+    // Pre-process
+    int64_t allocIdx = -1; // help MemoryOp::Free point back to source MemoryOp::Alloc
+    
+    // Replay Intermediate
     void* replayPtr = nullptr;
-    bool allocated = false;
 
     // Output
     Nanoseconds replayAllocTimestamp = Nanoseconds{ 0 };
     Nanoseconds allocTime = Nanoseconds{ 0 };
     Nanoseconds replayFreeTimestamp = Nanoseconds{ 0 };
     Nanoseconds freeTime = Nanoseconds{ 0 };
+
+    static std::vector<MemoryEntry> ParseJournal(const char* filepath);
 };
 
-std::vector<MemoryEntry> ParseMemoryLog(const char* filepath) {
-    std::vector<MemoryEntry> result;
-    result.reserve(1000000);
-
-    std::string line;
-    std::ifstream file;
-    file.open(filepath);
-
-    if (!file.is_open()) {
-        std::abort();
-    }
-
-    const std::string space_delimiter = " ";
-    while (std::getline(file, line)) {
-        MemoryEntry entry;
-        
-        // Parse op type
-        entry.op = line[0] == 'a' ? MemoryOp::Alloc : MemoryOp::Free;
-
-        // Pointer work because C++ can't split a string by whitespace
-        char* begin = line.data() + 2; // skip first char and first space
-        char* const lineEnd = line.data() + line.size();
-        char* end = std::find(begin, lineEnd, ' ');
-        auto advancePtrs = [&begin, &end, lineEnd]() {
-            begin = end + 1;
-            end = std::find(begin, lineEnd, ' ');
-        };
-
-        // (Optional) Parse size
-        uint64_t allocSize = 0;
-        if (entry.op == MemoryOp::Alloc) {
-            entry.allocSize = strtoull(begin, &end, 10);
-            advancePtrs();
-        }
-
-        // Parse ptr
-        //begin = std::find_if(begin, end, [](char c) { return c != '0'; });
-        entry.originalPtr = strtoull(begin, &end, 16);
-        advancePtrs();
-
-        // Parse threadId
-        entry.threadId = strtoull(begin, &end, 10);
-        advancePtrs();
-
-        // Parse timepoint
-        entry.originalTimestamp = Nanoseconds{ strtoull(begin, &end, 10) };
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
+// ----------------------------------------------------------------------------------
+// Main
+// ----------------------------------------------------------------------------------
 int main()
 {
     std::cout << "Hello World!" << std::endl << std::endl;
-    std::cout << "Selected Allocator: " << Allocator::name << std::endl << std::endl;
 
+    // Initialize allocator (if necessary
+    std::cout << "Selected Allocator: " << Allocator::name << std::endl << std::endl;
 #if USE_RPMALLOC
     std::cout << "Initializing rpmalloc" << std::endl << std::endl;
     rpmalloc_initialize();
 #endif
 
+    // Compute and print RDTSC information
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
     
+
+
     // ----------------------------------------------------------------------------------
     // Step 1: Parse Journal
     // ----------------------------------------------------------------------------------
     std::cout << "Parsing log file: " << logpath << std::endl;
-    auto journal = ParseMemoryLog(logpath);
+    auto journal = MemoryEntry::ParseJournal(logpath);
     std::cout << "Parse complete" << std::endl << std::endl;
 
 
@@ -258,9 +144,9 @@ int main()
     // ----------------------------------------------------------------------------------
 
     // Compute unique threadIds
-    std::unordered_map<uint64_t, size_t> threadOps;
+    std::unordered_set<uint64_t> threadIds;
     for (auto const& entry : journal) {
-        threadOps[entry.threadId] += 1;
+        threadIds.insert(entry.threadId);
     }
 
     // Build pairs of alloc/free
@@ -293,6 +179,9 @@ int main()
                         size_t idx2 = iter - journal.begin();
                         std::swap(journal[idx], journal[idx2]);
 
+                        // Count number of fixups
+                        numFixups += 1;
+
                         // Continue without increment idx to process the free
                         continue;
                     }
@@ -301,7 +190,6 @@ int main()
                         std::abort();
                     }
 
-                    numFixups += 1;
                 }
             }
             else if (entry.op == MemoryOp::Free) {
@@ -322,6 +210,9 @@ int main()
                         size_t idx2 = iter - journal.begin();
                         std::swap(journal[idx], journal[idx2]);
 
+                        // Count number of fixups
+                        numFixups += 1;
+
                         // Continue without increment idx to process the free
                         continue;
                     }
@@ -329,8 +220,6 @@ int main()
                         // Bad replay data? Re-used address?
                         std::abort();
                     }
-
-                    numFixups += 1;
                 }
             }
 
@@ -360,28 +249,24 @@ int main()
         std::cout << "Beginning replay" << std::endl;
 
         using ReplayClock = std::chrono::steady_clock;
-        auto replayStart = ReplayClock::now();
+        std::atomic<ReplayClock::time_point> replayStart;
 
-        auto replayDuration = std::chrono::nanoseconds{ journal.back().originalTimestamp };
-        std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
-        std::cout << "Replay Speed: " << replaySpeed << std::endl;
 
-#if THREADED_REPLAY
-        size_t numThreads = threadOps.size();
-#else
+        // Flags to track allocation
+        std::unique_ptr<std::atomic_bool[]> allocatedFlags{ new std::atomic_bool[journal.size()] };
+        for (auto i = 0; i < journal.size(); ++i) {
+            allocatedFlags[i] = false;
+        }
 
-        size_t idx = 0;
-        while (idx < journal.size()) {
-            auto& entry = journal[idx];
-
-            // Playback replay
+        const auto waitForTime = [&replayStart](MemoryEntry const& entry, ReplayClock::time_point replayStartTime) {
+            // Wait to process this entry until the timestamp
             if (replaySpeed > 0.0) {
                 for (;;) {
                     // Get "real" replayTime
-                    auto replayTime = ReplayClock::now() - replayStart;
+                    auto replayTime = ReplayClock::now() - replayStartTime;
 
                     // Scale replayTime
-                    auto scaledReplayTime = Nanoseconds{ long long((double)replayTime.count() * replaySpeed) };
+                    auto scaledReplayTime = Nanoseconds{ (long long)((double)replayTime.count() * replaySpeed) };
 
                     // Spin until replay
                     if (scaledReplayTime > entry.originalTimestamp) {
@@ -389,21 +274,25 @@ int main()
                     }
                 }
             }
+        };
 
+        // Lambda that processes a single entry
+        // Assumes entry is ready to be processed.
+        const auto processOne = [&](MemoryEntry& entry, size_t entryIdx) {
             if (entry.op == MemoryOp::Alloc) {
                 auto allocSize = entry.allocSize;
 
                 // Perform and instrument malloc
                 auto replayMallocStart = ReplayClock::now();
-                auto mallocStart = Clock::now();
+                auto mallocStart = RdtscClock::now();
                 entry.replayPtr = Allocator::alloc(entry.allocSize);
-                auto mallocEnd = Clock::now();
+                auto mallocEnd = RdtscClock::now();
 
                 // Store malloc time
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
                 entry.allocTime = mallocTime;
-                entry.replayAllocTimestamp = replayMallocStart - replayStart;
-                entry.allocated = true;
+                entry.replayAllocTimestamp = replayMallocStart - replayStart.load();
+                allocatedFlags[entryIdx] = true;
 
                 // Update counters
                 totalAllocs += 1;
@@ -413,7 +302,8 @@ int main()
             }
             else {
                 // Find alloc
-                auto& allocEntry = journal[entry.allocIdx];
+                auto allocIdx = entry.allocIdx;
+                auto& allocEntry = journal[allocIdx];
                 if (allocEntry.op != MemoryOp::Alloc || allocEntry.originalPtr != entry.originalPtr) {
                     // Pre-processing failed
                     std::abort();
@@ -424,29 +314,117 @@ int main()
 
                 // Perform and instrument free
                 auto replayFreeStart = ReplayClock::now();
-                auto freeStart = Clock::now();
+                auto freeStart = RdtscClock::now();
                 Allocator::free(replayPtr);
-                auto freeEnd = Clock::now();
+                auto freeEnd = RdtscClock::now();
 
                 // Compute free time
                 Nanoseconds freeTime = RdtscClock::ticksToNs(freeEnd - freeStart);
 
                 // Store some data back in the alloc entry for logging
-                allocEntry.replayFreeTimestamp = replayFreeStart - replayStart;
+                allocEntry.replayFreeTimestamp = replayFreeStart - replayStart.load();
                 allocEntry.freeTime = freeTime;
-                allocEntry.allocated = false;
+                allocatedFlags[allocIdx] = false;
 
                 // Update counters
                 totalFrees += 1;
                 curLiveBytes -= allocSize;
             }
+        };
 
-            idx += 1;
+        auto replayDuration = std::chrono::nanoseconds{ journal.back().originalTimestamp };
+        std::cout << "Replay Duration: " << formatTime(replayDuration) << std::endl;
+        std::cout << "Replay Speed: " << replaySpeed << std::endl;
+
+#if THREADED_REPLAY
+        size_t numThreads = threadIds.size();
+
+        std::atomic_bool start = false;
+        std::vector<std::thread> threads;
+        for (auto const& threadId : threadIds) {
+            // Run replay for this thread
+            auto threadReplayLambda = [
+                &start, 
+                &journal,
+                threadId,
+                &allocatedFlags,
+                &replayStart,
+                &processOne,
+                &waitForTime]() 
+            {
+                // Spin until start
+                while (!start) {
+                }
+
+                const auto replayStartCopy = replayStart.load();
+                size_t threadAllocs = 0;
+                size_t threadFrees = 0;
+
+                // Process each journal entry
+                for (size_t idx = 0; idx < journal.size(); ++idx) {
+                    auto& entry = journal[idx];
+
+                    // Ignore journal entries for other threads
+                    if (entry.threadId != threadId) {
+                        continue;
+                    }
+
+                    // Wait until it's time to process this entry
+                    waitForTime(entry, replayStart.load());
+
+                    // If entry is free, wait for alloc to have occurred
+                    // Necessary when alloc/free on different threads
+                    if (entry.op == MemoryOp::Free) {
+                        size_t allocIdx = entry.allocIdx;
+                        while (allocatedFlags[allocIdx] == false) {
+                            // Spin until this alloc exists
+                        }
+                    }
+
+                    // Process single entry
+                    processOne(entry, idx);
+
+                    if (entry.op == MemoryOp::Alloc) {
+                        threadAllocs += 1;
+                    }
+                    else {
+                        threadFrees += 1;
+                    }
+                }
+
+                std::cout << "Thread " << threadId << " performed " << threadAllocs << " allocs and " << threadFrees << " frees" << std::endl;
+            };
+
+            // Create thread to run lambda
+            threads.emplace_back(threadReplayLambda);
+        }
+
+        // Start the replay
+        replayStart = ReplayClock::now();
+        start = true;
+
+        // Run all threads to completion
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+#else
+
+        for (size_t idx = 0; idx < journal.size(); ++idx){
+            auto& entry = journal[idx];
+
+            // Wait until it's time to process this entry
+            waitForTime(entry, replayStart.load());
+
+            // Process single entry
+            processOne(entry, idx);
         }
 #endif
 
         std::cout << "Replay complete" << std::endl << std::endl;
     }
+
+
 
     // ----------------------------------------------------------------------------------
     // Step 4: Dump Results to File
@@ -560,10 +538,152 @@ int main()
 
     std::cout << "Goodbye Cruel World!\n";
 
+    // Clean up memory allocators
 #if USE_RPMALLOC
     rpmalloc_finalize();
 #endif
 }
+
+// ----------------------------------------------------------------------------------
+// Utility implementations
+// ----------------------------------------------------------------------------------
+std::string formatTime(Nanoseconds ns) {
+    auto count = ns.count();
+    if (count < 1000) {
+        return std::format("{} nanoseconds", count);
+    }
+    else if (count < 1000 * 1000) {
+        return std::format("{:.2f} microseconds", (double)count / 1000);
+    }
+    else if (count < 1000 * 1000 * 1000) {
+        return std::format("{:.2f} milliseconds", (double)count / 1000 / 1000);
+    }
+    else {
+        return std::format("{:.2f} seconds", (double)count / 1000 / 1000 / 1000);
+    }
+}
+
+std::string formatTime(long long ns) {
+    return formatTime(Nanoseconds{ ns });
+}
+
+std::string formatBytes(uint64_t bytes) {
+    if (bytes < 1024) {
+        return std::format("{} bytes", bytes);
+    }
+    else if (bytes < 1024 * 1024) {
+        return std::format("{} kilobytes", bytes / 1024);
+    }
+    else  if (bytes < 1024 * 1024 * 1024) {
+        return std::format("{} megabytes", bytes / 1024 / 1024);
+    }
+    else {
+        return std::format("{:.2f} gigabytes", (double)bytes / 1024 / 1024 / 1024);
+    }
+}
+
+uint64_t RdtscClock::now() { 
+    return __rdtsc(); 
+}
+
+double RdtscClock::nsPerTick() {
+    // Compute conversion from rdtscTicks to nanoseconds
+    // Computed by lambda that is evaluated exactly once due to static
+    static double nsPerTick = []() -> double {
+        constexpr int intervalMs = 5;
+        auto intervalNs = std::chrono::duration_cast<Nanoseconds>(Milliseconds{ intervalMs });
+        constexpr size_t numIntervals = 20;
+
+        // Run some samples
+        std::vector<uint64_t> ticks;
+        for (size_t i = 0; i < numIntervals; ++i) {
+            auto chronoStart = std::chrono::high_resolution_clock::now();
+            auto rdtscStart = RdtscClock::now();
+            decltype(chronoStart) chronoEnd;
+            do {
+                chronoEnd = std::chrono::high_resolution_clock::now();
+            } while ((chronoEnd - chronoStart) < intervalNs);
+            auto rdtscEnd = RdtscClock::now();
+            ticks.push_back(rdtscEnd - rdtscStart);
+        }
+
+        // Sort results 
+        std::sort(ticks.begin(), ticks.end(), std::greater<uint64_t>());
+
+        // Remove slowest (fewest ticks)
+        ticks.pop_back();
+
+        uint64_t sum = std::accumulate(ticks.begin(), ticks.end(), uint64_t{ 0 });
+        double avgTicksPerInterval = (double)sum / (double)ticks.size();
+        double avgNsPerTick = (double)intervalNs.count() / avgTicksPerInterval;
+
+        // Debug spew
+        //std::cout << "Fastest nsPerTick: " << (double)intervalNs.count() / (double)ticks.front() << std::endl;
+        //std::cout << "Median nsPerTick: " << (double)intervalNs.count() / (double)ticks[ticks.size() / 2] << std::endl;
+        //std::cout << "Slowest nsPerTick: " << (double)intervalNs.count() / (double)ticks.back() << std::endl;
+
+        return avgNsPerTick;
+    }();
+
+    return nsPerTick;
+}
+
+Nanoseconds RdtscClock::ticksToNs(uint64_t ticks) {
+    return Nanoseconds{ int64_t((double)ticks * nsPerTick()) };
+}
+std::vector<MemoryEntry> MemoryEntry::ParseJournal(const char* filepath) {
+    std::vector<MemoryEntry> result;
+    result.reserve(1000000);
+
+    std::string line;
+    std::ifstream file;
+    file.open(filepath);
+
+    if (!file.is_open()) {
+        std::abort();
+    }
+
+    const std::string space_delimiter = " ";
+    while (std::getline(file, line)) {
+        MemoryEntry entry;
+
+        // Parse op type
+        entry.op = line[0] == 'a' ? MemoryOp::Alloc : MemoryOp::Free;
+
+        // Pointer work because C++ can't split a string by whitespace
+        char* begin = line.data() + 2; // skip first char and first space
+        char* const lineEnd = line.data() + line.size();
+        char* end = std::find(begin, lineEnd, ' ');
+        auto advancePtrs = [&begin, &end, lineEnd]() {
+            begin = end + 1;
+            end = std::find(begin, lineEnd, ' ');
+        };
+
+        // (Optional) Parse size
+        uint64_t allocSize = 0;
+        if (entry.op == MemoryOp::Alloc) {
+            entry.allocSize = strtoull(begin, &end, 10);
+            advancePtrs();
+        }
+
+        // Parse ptr
+        //begin = std::find_if(begin, end, [](char c) { return c != '0'; });
+        entry.originalPtr = strtoull(begin, &end, 16);
+        advancePtrs();
+
+        // Parse threadId
+        entry.threadId = strtoull(begin, &end, 10);
+        advancePtrs();
+
+        // Parse timepoint
+        entry.originalTimestamp = Nanoseconds{ strtoull(begin, &end, 10) };
+
+        result.push_back(entry);
+    }
+
+    return result;
+}
+
 
 // TODO
 //   * Implement tracing to detect context switches 
