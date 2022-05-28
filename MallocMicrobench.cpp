@@ -54,7 +54,7 @@ static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must p
 #define THREADED_REPLAY 1
 
 // Config
-constexpr double replaySpeed = 10.0;
+constexpr double replaySpeed = 1.0;
 constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
 constexpr const char* resultDir = "c:/temp/";
 
@@ -454,7 +454,7 @@ int main()
     // ----------------------------------------------------------------------------------
     {
         std::string speedStr;
-        if (replaySpeed == 0) {
+        if (replaySpeed <= 0) {
             speedStr = "MaxSpeed";
         }
         else if (replaySpeed == 1.0) {
@@ -464,7 +464,7 @@ int main()
             speedStr = "10x";
         }
         else {
-            speedStr = "UnknownSpeed";
+            speedStr = std::format("{:2f}", replaySpeed);
         }
 
 #if THREADED_REPLAY
@@ -558,7 +558,7 @@ int main()
     std::cout << "Total Allocation:     " << formatBytes(totalAllocBytes) << std::endl;
     std::cout << "Max Live Bytes:       " << formatBytes(maxLiveAllocBytes) << std::endl;
     std::cout << "Average Allocation:   " << formatBytes(totalAllocBytes / mallocCount) << std::endl;
-    std::cout << "Median Allocation:   " << formatBytes(medianAllocSize) << std::endl;
+    std::cout << "Median Allocation:    " << formatBytes(medianAllocSize) << std::endl;
     std::cout << "Average Malloc Time:  " << formatTime(totalMallocTimeNs / mallocCount) << std::endl;
     std::cout << "Num Leaked Bytes:     " << formatBytes(curLiveBytes) << std::endl;
     std::cout << std::endl;

@@ -17,39 +17,44 @@ save_pngs = False
 
 # Replays
 replays = {
-    "crt_0x_single": {
-        "csv_filename" : "doom3_replayreport_crt_MaxSpeed_SingleThread.csv",
-        "chart_title" : "CRT - Maximum Speed - SingleThreaded",
+    "crt_1x_multi": {
+        "csv_filename" : "doom3_replayreport_crt_1x_MultiThread.csv",
+        "chart_title" : "Annotated - CRT - 1x Speed - Multithreaded",
     },
-    "crt_0x_multi": {
-        "csv_filename" : "doom3_replayreport_crt_MaxSpeed_MultiThread.csv",
-        "chart_title" : "CRT - Maximum Speed - MultiThreaded",
-    },
-    "crt_1x": {
-        "csv_filename" : "alloc_times_6min_realtimeReplay.csv",
-        "chart_title" : "CRT - 1x Speed",
-    },
-    "crt_10x_single": {
-        "csv_filename" : "doom3_replayreport_crt_10x_SingleThread.csv",
-        "chart_title" : "CRT - 10x Speed - SingleThreaded",
-    },
-    "crt_10x_multi": {
-        "csv_filename" : "doom3_replayreport_crt_10x_MultiThread.csv",
-        "chart_title" : "CRT - 10x Speed - MultiThreaded",
-    },
-    "mimalloc_10x" : {
-        "csv_filename" : "alloc_times_6min_10xspeed_mimalloc.csv",
-        "chart_title" : "mimalloc - 10x Speed",
-    },
-    "rpmalloc_10x" : {
-        "csv_filename" : "alloc_times_6min_10xspeed_rpmalloc.csv",
-        "chart_title" : "rpmalloc - 10x Speed",
-    }
+    
+    # "crt_0x_single": {
+    #     "csv_filename" : "doom3_replayreport_crt_MaxSpeed_SingleThread.csv",
+    #     "chart_title" : "CRT - Maximum Speed - SingleThreaded",
+    # },
+    # "crt_0x_multi": {
+    #     "csv_filename" : "doom3_replayreport_crt_MaxSpeed_MultiThread.csv",
+    #     "chart_title" : "CRT - Maximum Speed - MultiThreaded",
+    # },
+    # "crt_1x": {
+    #     "csv_filename" : "alloc_times_6min_realtimeReplay.csv",
+    #     "chart_title" : "CRT - 1x Speed",
+    # },
+    # "crt_10x_single": {
+    #     "csv_filename" : "doom3_replayreport_crt_10x_SingleThread.csv",
+    #     "chart_title" : "CRT - 10x Speed - SingleThreaded",
+    # },
+    # "crt_10x_multi": {
+    #     "csv_filename" : "doom3_replayreport_crt_10x_MultiThread.csv",
+    #     "chart_title" : "CRT - 10x Speed - MultiThreaded",
+    # },
+    # "mimalloc_10x" : {
+    #     "csv_filename" : "alloc_times_6min_10xspeed_mimalloc.csv",
+    #     "chart_title" : "mimalloc - 10x Speed",
+    # },
+    # "rpmalloc_10x" : {
+    #     "csv_filename" : "alloc_times_6min_10xspeed_rpmalloc.csv",
+    #     "chart_title" : "rpmalloc - 10x Speed",
+    # }
 }
 
 # Replays to process
 # None = All
-selected_replays = ["crt_0x_single", "crt_0x_multi", "crt_10x_single", "crt_10x_multi"]
+selected_replays = None
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
@@ -113,11 +118,11 @@ def main():
 
             # process data
             for row in reader:
-                replayTimestamp = float(row[1])
-                allocTime = float(row[2])
-                allocSize = float(row[3])
-                replayFreeTimestamp = float(row[4])
-                freeTime = float(row[5])
+                replayTimestamp = float(row[0])
+                allocTime = float(row[1])
+                allocSize = float(row[2])
+                replayFreeTimestamp = float(row[3])
+                freeTime = float(row[4])
                 allocTimestamps.append(replayTimestamp)
                 allocTimes.append(allocTime)
                 allocSizes.append(allocSize)
@@ -128,8 +133,14 @@ def main():
         print("Parse Complete\n")
 
         # Shared plot data
+        #x_ticks = [i*1e9 for i in range(30, 420+1, 30)]
+        x_ticks = [i*1e9 for i in range(60, 420+1, 60)]
         def x_labels(tick, pos):
-            return f"{tick / 1e9}"
+            nsPerMinute = 60e9
+            nsPerSecond = 1e9
+            minutes = int(tick / nsPerMinute)
+            seconds = int((tick - minutes*nsPerMinute) / nsPerSecond)
+            return f"{minutes}:{seconds:02d}"
 
         def y_labels(tick, pos):
             return format_nanoseconds(tick)
@@ -149,11 +160,12 @@ def main():
                 cmap=cmap, 
                 norm=colors.LogNorm(vmin=None,vmax=mallocMax))
             plt.semilogy(basey=10)
+            ax.set_xticks(x_ticks)
             ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
-            ax.set_ylabel("Malloc Time")
+            ax.set_ylabel("Alloc Time")
             ax.set_ylim(bottom=3,top=1000*1000*1) # 1 millisecond
-            ax.set_xlabel("Replay Time (seconds)")
+            ax.set_xlabel("Replay Time")
             ax.set_title(f"{title_prefix} - Allocate Memory - {chart_title}")
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())

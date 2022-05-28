@@ -23,13 +23,13 @@ Answering the question is even harder. The boring answer the same as always, it 
 
 Allocating memory isn't free. But neither is time spent on complex systems full of error prone lockless programming. My spidey sense suggests `malloc` is cheaper than people realize.
 
-For today I'm focused on games. Modern games run between 60 and 144 frames per second. One frame at 144Hz is about 7 milliseconds. That's not a lot of time! Except I know for a fact that most games hit the allocator hard. Worst case in theory sets my computer on fire. But what is it in practice?
+For today I'm focused on games. Modern games run between 60 and 144 frames per second. One frame at 144Hz is about 7 milliseconds. That's not very many milliseconds! Except I know for a fact that most games hit the allocator hard. Worst case in theory sets my computer on fire. But what is it in practice?
 
-My goal isn't to come up with a singular, definitive answer. I'm a big fan of napkin math. I want a rough estimate of when `malloc` will cause me to miss my target framerate.
+My goal isn't to come up with a singular, definitive answer. I'm a big fan of napkin math. I want a ballpark guideline of when `malloc` may cause me to miss my target framerate.
 
 # Creating a Journal
 
-My first attempt at a benchmark involved randomly allocating and freeing blocks of memory. Twitter friends correctly scolded me and said that's not good enough. I need real data with real allocation patterns and sizes.
+My first attempt at a benchmark involved allocating and freeing blocks of random size. Twitter friends correctly scolded me and said that's not good enough. I need real data with real allocation patterns and sizes.
 
 The goal is to create a "journal" of memory operations. It should record `malloc` and `free` operations with their inputs and outputs. Then the journal can be replayed with different allocators to compare performance.
 
@@ -37,7 +37,7 @@ Unfortunately I don't have a suitable personal project for generating this journ
 
 It took some time to find a Doom 3 project that had a "just works" Visual Studio project. Eventually I found [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG) which only took a little effort to get running.
 
-All memory allocations go through simple `Mem_Alloc16` and `Mem_Free16` functions in [Heap.cpp](https://github.com/RobertBeckebans/RBDOOM-3-BFG/blob/master/neo/idlib/Heap.cpp). Modifying this was trivial. I started with the simplest possible thing and wrote every allocation to disk via `std::fwrite`. It runs a solid 60fps even in debug mode. Ship it!
+All memory allocations go through `Mem_Alloc16` and `Mem_Free16` functions defined in [Heap.cpp](https://github.com/RobertBeckebans/RBDOOM-3-BFG/blob/master/neo/idlib/Heap.cpp). Modifying this was trivial. I started with the simplest possible thing and wrote every allocation to disk via `std::fwrite`. It runs a solid 60fps even in debug mode. Ship it!
 
 ``` cpp
 void* fts_allocator::allocInternal(const size_t size) {
@@ -75,9 +75,9 @@ a 3840 0000023101F2B260 15888 1202200
 f 0000023101F298A0 15888 1207900
 ```
 
-All content for the rest of this post is derived from the same journal. Its a 315 Mb file containing over 8,000,000 lines. Roughly 4 million `mallocs` and 4 million `frees`. It leaks 4 megabytes from 4538 `mallocs`, tsk tsk.
+All content for the rest of this post is derived from the same journal. Its a 420 megabyte file containing over 11,000,000 lines. Roughly 5.5 million `mallocs` and 5.5 million `frees`. It leaks 7 megabytes from 8473 `mallocs`, tsk tsk.
 
-The journal covers 6 minutes of game time. I entered the main menu, selected a level, played for ~5 minutes, died, returned to main menu, and quit to desktop. I did this a few times and each run appeared to produce very similar journals.
+The journal covers 7 minutes of game time. I entered the main menu, selected a level, played, died, reloaded, died again, quit to main menu, and quit to desktop. I did this a few times and each run appeared to produce very similar journals. 
 
 # Replaying the Journal
 Next, we need to write code to load and replay the journal. To do this I created a new C++ project called `MallocMicrobench`. The code is very roughly:
@@ -91,7 +91,7 @@ for (auto& entry : journal) {
     if (entry.op == Alloc) {
         auto allocStart = RdtscClock::now();
         void* ptr = ::malloc(entry.size);
-        auto mallocTime = RdtscClock::now() - allocStart;
+        auto allocTime = RdtscClock::now() - allocStart;
     } else {
         auto freeStart = RdtscClock::now();
         ::free(entry.ptr);
@@ -100,98 +100,161 @@ for (auto& entry : journal) {
 }
 ```
 
-This snippet excludes configuration and bookkeeping. The basic idea is very simple.
+This snippet excludes configuration and bookkeeping. I think you get the basic idea.
 
 Running my journal through the new replay system produces the following output:
 
-TODO: update
-
 ```
-Parsing log file: C:/temp/doom3_journal.txt
+Parsing log file: c:/temp/doom3_journal.txt
 Parse complete
 
-Replay Duration: 325.93 seconds
+Pre-processing replay entries
+Num Fixups:   3
+Num Leaks:    8473
+Pre-process complete
+
 Beginning replay
+Replay Duration: 433.59 seconds
+Replay Speed: 1
+Thread 12408 performed 188 allocs and 170 frees
+Thread 25524 performed 1 allocs and 0 frees
+Thread 19832 performed 120186 allocs and 117035 frees
+Thread 19604 performed 116095 allocs and 113475 frees
+Thread 8860 performed 1329134 allocs and 1320185 frees
+Thread 7360 performed 3966105 allocs and 3972371 frees
 Replay complete
 
+Writing alloc times to: c:/temp/doom3_replayreport_crt_1x_MultiThread.csv
+Write complete
 == Replay Results ==
-Number of Mallocs:    4070475
-Number of Frees:      4065937
-Total Allocation:     1.66 gigabytes
+Number of Mallocs:    5531709
+Number of Frees:      5523236
+Total Allocation:     2.47 gigabytes
 Max Live Bytes:       330 megabytes
-Average Allocation:   437 bytes
-Average Malloc Time:  45 nanoseconds
-Num Leaked Bytes:     4 megabytes
+Average Allocation:   480 bytes
+Median Allocation:    64 bytes
+Average Malloc Time:  57 nanoseconds
+Num Leaked Bytes:     7 megabytes
 
 Alloc Time
 Best:    21 nanoseconds
 p1:      22 nanoseconds
-p10:     23 nanoseconds
+p10:     22 nanoseconds
 p25:     24 nanoseconds
-p50:     25 nanoseconds
-p75:     31 nanoseconds
-p90:     45 nanoseconds
-p95:     54 nanoseconds
-p98:     86 nanoseconds
-p99:     149 nanoseconds
-p99.9:   2.67 microseconds
-p99.99:  25.91 microseconds
-p99.999: 90.95 microseconds
-Worst:   231.59 microseconds
+p50:     35 nanoseconds
+p75:     46 nanoseconds
+p90:     58 nanoseconds
+p95:     84 nanoseconds
+p98:     186 nanoseconds
+p99:     276 nanoseconds
+p99.9:   2.76 microseconds
+p99.99:  25.78 microseconds
+p99.999: 100.11 microseconds
+Worst:   235.77 microseconds
 
 Free Time
 Best:    21 nanoseconds
-p1:      23 nanoseconds
-p10:     24 nanoseconds
+p1:      22 nanoseconds
+p10:     23 nanoseconds
 p25:     25 nanoseconds
-p50:     28 nanoseconds
-p75:     33 nanoseconds
-p90:     43 nanoseconds
-p95:     78 nanoseconds
-p98:     97 nanoseconds
-p99:     120 nanoseconds
-p99.9:   572 nanoseconds
-p99.99:  6.99 microseconds
-p99.999: 49.02 microseconds
-Worst:   1.17 milliseconds
+p50:     33 nanoseconds
+p75:     40 nanoseconds
+p90:     77 nanoseconds
+p95:     93 nanoseconds
+p98:     184 nanoseconds
+p99:     272 nanoseconds
+p99.9:   920 nanoseconds
+p99.99:  7.35 microseconds
+p99.999: 35.39 microseconds
+Worst:   1.55 milliseconds
 ```
 
-Interesting! Average `malloc` time is just 45 nanoseconds. Pretty good. However p99.9 is 2.67 microseconds. That's 1 in 1000. Worst case is a whopping 230 microseconds, ouch! `free` is similar, but with a shockingly bad worst case performance of 1.17 milliseconds. Yikes! 
+Interesting! Average `malloc` time is 57 nanoseconds. That's decent. However p99.9 (1 in 1000) is 2.67 microseconds. That's not great. Worst case is a whopping 230 microseconds, ouch! `free` is similar, but with a shockingly bad worst case performance of 1.55 milliseconds. Yikes! 
 
 What does this mean for hitting a stable 60Hz or 144Hz? Honestly, I don't know. There's a ton of variance. Are the slow allocations because of very large allocations? Do slow allocs occur only during a loading screen or also in the middle of gameplay? Are extreme outliers due to OS context switches? We don't have enough information.
 
 # Visualizing the Journal
 
-To visualize the data we need to take `doom3_journal.txt`, run a replay, and then produce a new `doom3_replayreport.csv`. It adds replay timestamps and replay profile time for `malloc` and `free`. `free` data is stored adjacent to `alloc` data so it only has 4 million rows. It looks like this:
+We need to graph our raw data to make better sense of it.
 
+First, I took `doom3_journal.txt`, ran a replay, and produced a new `doom3_replayreport.csv`. This replay report contains replay timestamps and replay profiler time for `malloc` and `free`. It looks like this:
 
 ```csv
 replayAllocTimestamp,allocTime,allocSize,replayFreeTimestamp,freeTime
-895900,392,2048,0,0
-896500,214,1280,897100,480
-896800,202,2560,897800,208
-897600,160,3840,0,0
-898100,171,1280,898500,143
-898300,141,2560,903200,145
-898700,4487,3840,0,0
-903400,191,3760,596526100,247
-903600,1207,3760,596526300,227
-904900,1205,3760,596526600,107
+661500,375,2048,0,0
+881700,531,1280,912000,254
+911600,268,2560,935400,343
+917500,261,3840,0,0
+935800,153,1280,961800,101
+961600,206,2560,962700,146
+962000,248,3840,0,0
+984500,447,3760,432968726000,397
+993400,18980,3760,432968728400,758
+1012500,1354,3760,432968729200,133
+1013900,1365,3760,432968842900,161
 ```
 
-To better understand the data I decided to build a visualization using Python's [matplotlib](https://matplotlib.org/).
+To graph this data I used Python's [matplotlib](https://matplotlib.org/).
 
-My first attempt was a heatmap. This did not go well and was not useful. I soon tried a scatterplot. This worked out great. Unfortunately, Python is a miserably slow language so rendering 8 million points took over 30 seconds. Yikes!
+My first attempt was a heatmap. This did not go well and was not useful. I soon tried a scatterplot. This worked out great. Unfortunately, Python is a miserably slow language so rendering 11 million points took over 45 seconds. Yikes!
 
-A kind Twitter user pointed me towards a matplotlib extension called [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density). This worked phenomenally well and turned 40 seconds into 3 seconds. My biggest bottleneck is actually csv parsing. 
+A kind Twitter user pointed me towards a matplotlib extension called [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density). This worked phenomenally well and turned 45 seconds into 3 seconds. My biggest bottleneck is actually csv parsing. 
 
-New tools in tow I produced this:
+New tools in hand I produced this:
 
 <insert screenshot of crt malloc>
 <include button to toggle between malloc and free>
 
-Data visualization is story telling. What story
+Data visualization is story telling. This story has a lot going on. Let's break it down.
 
+Every single point represents a single call to `malloc`. There are 5.5 million points. The x-axis is replay time, just over 7 minutes. The y-axis is alloc time. Note the y-axis is in **logarithmic scale**. Finally, each pixel has a color which represents the size of that allocation. The color scale is also logarithmic.
+
+There are some very expensive allocations at the very start when the game first boots. At ~30 seconds there are many allocations that are large and expensive as the level loads. There are similar allocations when I die and reload at 2 minutes.
+
+During actual gameplay the vast majority of allocations take from 21 nanoseconds to 500 nanoseconds. Not amazing. Unfortunately there are more than a few allocs sprinkled between 1 and 20 microseconds. Even worse, those expensive allocs are as small as just 16 bytes!
+
+Here's a zoom shot that covers the first gameplay segment.
+
+<insert screenshot of crt malloc zoomed>
+
+# Initial Takeaways
+
+What can we take away from this? A few things.
+
+1. C Runtime (CRT) `malloc` is all over the place
+2. Majority of mallocs are under 60 nanoseconds (p90)
+3. Almost all mallocs are under 20 microseconds (p99.99)
+
+Is this good or bad? It *feels* bad. The inconsistency is frustrating. However it's important to note that my gameplay ran a rock solid 60fps!
+
+Worst degenerate case is my computer catches fire. Thus far my computer has not caught fire. Nor has `malloc` frozen my computer for 10 seconds. In all of my testing I have not seen a single malloc take more than a few hundred microseconds.
+
+I'm going to make a bold claim:
+
+**Most code can safely call `malloc` and still hit their target framerate.**
+
+I believe this is true even if your code is an audio plugin that needs to compute a buffer in under 4 milliseconds.
+
+The problem isn't `malloc` per se. The problem is if you call `malloc` once then you probably call it more than once. It's death by a thousand cuts. It adds up fast and once you have 1,000 calls to `malloc` it's excruciatingly difficult to unwind them.
+
+# Different allocators
+
+Thus far all testing has been doing using standard C Runtime calls to `malloc` and `free`. CRT `malloc` is infamously slow. Therefore it makes sense to compare different allocators. Since we have a memory journal and replay system we can replay the exact sequence of allocations.
+
+I chose three allocators to compare.
+
+1. [jemalloc](http://jemalloc.net/) - an industrial strength allocator used by FreeBSD, Rust, and more.
+2. [mimalloc](https://github.com/microsoft/mimalloc) - a general purpose allocator by Microsoft
+3. [rpmalloc](https://github.com/mjansson/rpmalloc) - a lock free general purpose allocator by a now Epic Games employee
+
+
+
+
+# Malloc vs Objected Oriented Bullshit
+https://macton.smugmug.com/Other/2008-07-15-by-Eye-Fi/n-xmKDH/
+
+
+# Revisiting Game Audio
 
 # Latency vs Reliability is a Trade-Off
 
@@ -214,6 +277,10 @@ The one exception, `malloc` is called every single frame on player input. You ca
 `std::chrono` clocks have a maximum precision of 100 nanoseconds. My initial replay system used `std::chrono::high_resolution_clock` and my report produced malloc times of either 0ns or 100ns. This is clearly insufficient for what I'm attempting to measure.
 
 Using RDTSC is tricky. The conversion from ticks to nanoseconds requires procedurally measuring RDTSC against another timer. I performed twenty 5-millisecond spins to calibrate. The result does vary. My i7-8700k machine computes 0.270564 nanoseconds per tick. The inverse of which almost perfectly matches my 3.7 GHz CPU.
+
+## Embedded
+
+If you read this post and want to reply "this is completely wrong because embedded" just stop and delete your snarky comment now. Yes, the rules are extremely different for embedded. Servers, desktops, consoles, smartphones, and embedded all have different requirements and characteristics.
 
 
 # TODO
