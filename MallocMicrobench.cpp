@@ -179,6 +179,7 @@ int main()
 
         // originalPtr -> sourceIdx
         int numFixups = 0;
+        int numCrossThread = 0;
         std::unordered_map<uint64_t, size_t> liveAllocs;
         size_t idx = 0;
         while (idx < journal.size()) {
@@ -220,6 +221,10 @@ int main()
                 if (iter != liveAllocs.end()) {
                     entry.allocIdx = iter->second;
                     liveAllocs.erase(iter);
+
+                    if (entry.threadId != journal[entry.allocIdx].threadId) {
+                        numCrossThread += 1;
+                    }
                 }
                 else {
                     auto iter = std::find_if(
@@ -249,8 +254,9 @@ int main()
             idx += 1;
         }
 
-        std::cout << "Num Fixups:   " << numFixups << std::endl;
-        std::cout << "Num Leaks:    " << liveAllocs.size() << std::endl;
+        std::cout << "Num Fixups:           " << numFixups << std::endl;
+        std::cout << "Num Leaks:            " << liveAllocs.size() << std::endl;
+        std::cout << "Cross-thread Frees:   " << numCrossThread << std::endl;
         std::cout << "Pre-process complete" << std::endl << std::endl;
     }
 

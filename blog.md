@@ -250,6 +250,24 @@ I chose three allocators to compare.
 
 
 
+# Limitations
+Oh boy there's a lot of limitions.
+
+* Only ran on high-end desktop
+* Only ran on Windows
+* Doom 3 originally shipped in 2004
+* Peak live usage of just 330 megabytes
+* Only allocated 2.47 gigabytes total
+* Doom 3 is an extremely well optimized game!
+* 7 minutes isn't a very long run time
+* Minimal cross-thread `free`
+* Tested just a single application
+* More I'm forgetting
+
+There is no single answer to "how expensive is it to allocate memory". The answer always depends. Always.
+
+The only thing that ultimately matters is how your application runs in your environment. 
+
 # Malloc vs Objected Oriented Bullshit
 https://macton.smugmug.com/Other/2008-07-15-by-Eye-Fi/n-xmKDH/
 
