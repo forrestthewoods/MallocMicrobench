@@ -15,12 +15,27 @@
 
 #pragma intrinsic(__rdtsc)
 
-// Allocator. Pick exactly one.
+// Memory allocator selection
+// There are multiple project configurations. Each config should define exactly one target
+// These macros help ensure exactly one config is explicitly specified
+#ifndef USE_CRT
 #define USE_CRT 0
+#endif
+
+#ifndef USE_JEMALLOC
+#define USE_JEMALLOC 0
+#endif 
+
+#ifndef USE_MIMALLOC
 #define USE_MIMALLOC 0
+#endif 
+
+#ifndef USE_RPMALLOC
 #define USE_RPMALLOC 0
-#define USE_JEMALLOC 1
-static_assert(USE_CRT + USE_MIMALLOC + USE_RPMALLOC + USE_JEMALLOC == 1, "Must pick exactly one allocator");
+#endif 
+
+// Allocator. Pick exactly one.
+static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
 
 #if USE_CRT
 #include <stdlib.h>
