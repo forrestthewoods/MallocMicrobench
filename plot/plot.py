@@ -9,17 +9,44 @@ import cmasher as cmr
 
 # Config
 maxEntries = 0 # 0 = All
-fullscreen = False
+fullscreen = True
 prepare_alloc_graph = True
-prepare_free_graph = False
-show_plot = True
+prepare_free_graph = True
+show_plot = False
 save_pngs = True
 
 # Replays
 replays = {
-    "crt_1x_multi": {
-        "csv_filename" : "doom3_replayreport_crt_1x_MultiThread.csv",
-        "chart_title" : "Annotated - CRT - 1x Speed - Multithreaded",
+    "crt_1x": {
+        "csv_filename" : "doom3_replayreport_crt_1x.csv",
+        "chart_title" : "CRT - 1x Speed",
+    },
+    "crt_10x": {
+        "csv_filename" : "doom3_replayreport_crt_10x.csv",
+        "chart_title" : "CRT - 10x Speed",
+    },
+    "crt_25x": {
+        "csv_filename" : "doom3_replayreport_crt_25x.csv",
+        "chart_title" : "CRT - 25x Speed",
+    },
+    "crt_max": {
+        "csv_filename" : "doom3_replayreport_crt_MaxSpeed.csv",
+        "chart_title" : "CRT - Max Speed",
+    },
+
+    "jemalloc_10x": {
+        "csv_filename" : "doom3_replayreport_jemalloc_10x.csv",
+        "chart_title" : "jemalloc - 10x Speed",
+    },
+
+    "mimalloc_10x": {
+        "csv_filename" : "doom3_replayreport_mimalloc_10x.csv",
+        "chart_title" : "mimalloc - 10x Speed",
+    },
+
+    "rpmalloc_10x": {
+        "csv_filename" : "doom3_replayreport_rpmalloc_10x.csv",
+        "chart_title" : "rpmalloc - 10x Speed",
     },
     
     # "crt_0x_single": {
@@ -53,8 +80,9 @@ replays = {
 }
 
 # Replays to process
-# None = All
-selected_replays = None
+#selected_replays = None # None = All
+selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
+#selected_replays = ["crt_1x", "crt_10x", "crt_25x", "crt_max"]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
@@ -133,8 +161,6 @@ def main():
         print("Parse Complete\n")
 
         # Shared plot data
-        #x_ticks = [i*1e9 for i in range(30, 420+1, 30)]
-        x_ticks = [i*1e9 for i in range(60, 420+1, 60)]
         def x_labels(tick, pos):
             nsPerMinute = 60e9
             nsPerSecond = 1e9
@@ -147,7 +173,6 @@ def main():
 
         cbar_ticks = [32,64,128,256,512,kilobyte,kilobyte*10, kilobyte*100, megabyte, megabyte*10, mallocMax]
         cmap = cmr.get_sub_cmap('nipy_spectral', 0.03, 0.96)
-        #cmap = 'nipy_spectral'
 
         # Alloc times
         if prepare_alloc_graph:
@@ -160,7 +185,6 @@ def main():
                 cmap=cmap, 
                 norm=colors.LogNorm(vmin=None,vmax=mallocMax))
             plt.semilogy(basey=10)
-            ax.set_xticks(x_ticks)
             ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
             ax.set_ylabel("Alloc Time")

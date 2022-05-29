@@ -54,7 +54,7 @@ static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must p
 #define THREADED_REPLAY 1
 
 // Config
-constexpr double replaySpeed = 1.0;
+constexpr double replaySpeed = 10.0;
 constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
 constexpr const char* resultDir = "c:/temp/";
 
@@ -381,6 +381,10 @@ int main()
                 &processOne,
                 &waitForTime]() 
             {
+#if USE_RPMALLOC
+                rpmalloc_thread_initialize();
+#endif
+
                 // Spin until start
                 while (!start) {
                 }
@@ -422,6 +426,10 @@ int main()
                 }
 
                 std::cout << "Thread " << threadId << " performed " << threadAllocs << " allocs and " << threadFrees << " frees" << std::endl;
+            
+#if USE_RPMALLOC
+                rpmalloc_thread_finalize(1);
+#endif
             };
 
             // Create thread to run lambda
@@ -459,27 +467,15 @@ int main()
     // Step 4: Dump Results to File
     // ----------------------------------------------------------------------------------
     {
-        std::string speedStr;
-        if (replaySpeed <= 0) {
-            speedStr = "MaxSpeed";
-        }
-        else if (replaySpeed == 1.0) {
-            speedStr = "1x";
-        }
-        else if (replaySpeed == 10.0) {
-            speedStr = "10x";
-        }
-        else {
-            speedStr = std::format("{:2f}", replaySpeed);
-        }
+        std::string speedStr = replaySpeed <= 0 ? "MaxSpeed" : std::format("{}x", (int)replaySpeed);
 
 #if THREADED_REPLAY
-        std::string threadStr = "MultiThread";
+        std::string threadStr = "";
 #else
-        std::string threadStr = "SingleThread";
+        std::string threadStr = "_SingleThread";
 #endif
 
-        std::string filepath = std::format("{}doom3_replayreport_{}_{}_{}.csv", 
+        std::string filepath = std::format("{}doom3_replayreport_{}_{}{}.csv", 
             resultDir,
             Allocator::name,
             speedStr,
