@@ -528,3 +528,80 @@ p99.999: 8.54 microseconds
 Worst:   25.84 microseconds
 
 Goodbye Cruel World!
+
+# ----------------------------------------------------------------
+# doom3_replayreport_dlmalloc_10x
+# ----------------------------------------------------------------
+
+Hello World!
+
+Selected Allocator: dlmalloc
+
+Nanoseconds per RDTSC tick: 0.270563
+
+Parsing log file: c:/temp/doom3_journal.txt
+Parse complete
+
+Pre-processing replay entries
+Num Fixups:           3
+Num Leaks:            8473
+Cross-thread Frees:   160875
+Pre-process complete
+
+Beginning replay
+Replay Duration: 433.59 seconds
+Replay Speed: 10
+Thread 12408 performed 188 allocs and 170 frees
+Thread 25524 performed 1 allocs and 0 frees
+Thread 19604 performed 116095 allocs and 113475 frees
+Thread 19832 performed 120186 allocs and 117035 frees
+Thread 8860 performed 1329134 allocs and 1320185 frees
+Thread 7360 performed 3966105 allocs and 3972371 frees
+Replay complete
+
+Writing alloc times to: c:/temp/doom3_replayreport_dlmalloc_10x.csv
+Write complete
+== Replay Results ==
+Number of Mallocs:    5531709
+Number of Frees:      5523236
+Total Allocation:     2.47 gigabytes
+Max Live Bytes:       332 megabytes
+Average Allocation:   480 bytes
+Median Allocation:    64 bytes
+Average Malloc Time:  39.87 microseconds
+Num Leaked Bytes:     7 megabytes
+
+Alloc Time
+Best:    17 nanoseconds
+p1:      18 nanoseconds
+p10:     19 nanoseconds
+p25:     20 nanoseconds
+p50:     21 nanoseconds
+p75:     27 nanoseconds
+p90:     38 nanoseconds
+p95:     53 nanoseconds
+p98:     96 nanoseconds
+p99:     207 nanoseconds
+p99.9:   3.33 microseconds
+p99.99:  63.84 milliseconds
+p99.999: 63.88 milliseconds
+Worst:   191.38 milliseconds
+
+Free Time
+Best:    17 nanoseconds
+p1:      18 nanoseconds
+p10:     20 nanoseconds
+p25:     21 nanoseconds
+p50:     23 nanoseconds
+p75:     28 nanoseconds
+p90:     55 nanoseconds
+p95:     90 nanoseconds
+p98:     141 nanoseconds
+p99:     209 nanoseconds
+p99.9:   584 nanoseconds
+p99.99:  63.84 milliseconds
+p99.999: 63.89 milliseconds
+Worst:   191.50 milliseconds
+
+
+Goodbye Cruel World!

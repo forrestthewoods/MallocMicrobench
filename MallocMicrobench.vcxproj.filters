@@ -25,6 +25,9 @@
     <Filter Include="thirdparty\jemalloc">
       <UniqueIdentifier>{6bdfa8b4-cd00-4bdc-849d-f88e33e5c01a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="thirdparty\dlmalloc">
+      <UniqueIdentifier>{2bd4c6fa-9737-4b6c-8b2d-1ec6288ccd23}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp">
@@ -32,6 +35,9 @@
     </ClCompile>
     <ClCompile Include="thirdparty\rpmalloc\rpmalloc.c">
       <Filter>thirdparty\rpmalloc</Filter>
+    </ClCompile>
+    <ClCompile Include="thirdparty\dlmalloc\dlmalloc.c">
+      <Filter>thirdparty\dlmalloc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -43,6 +49,9 @@
     </ClInclude>
     <ClInclude Include="thirdparty\jemalloc\jemalloc.h">
       <Filter>thirdparty\jemalloc</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\dlmalloc\dlmalloc.h">
+      <Filter>thirdparty\dlmalloc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

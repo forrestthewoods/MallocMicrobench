@@ -12,8 +12,9 @@ maxEntries = 0 # 0 = All
 fullscreen = True
 prepare_alloc_graph = True
 prepare_free_graph = True
-show_plot = False
+show_plot = True
 save_pngs = True
+y_max = 1000*1000*1
 
 # Replays
 replays = {
@@ -32,6 +33,11 @@ replays = {
     "crt_max": {
         "csv_filename" : "doom3_replayreport_crt_MaxSpeed.csv",
         "chart_title" : "CRT - Max Speed",
+    },
+
+    "dlmalloc_10x": {
+        "csv_filename" : "doom3_replayreport_dlmalloc_10x.csv",
+        "chart_title" : "dlmalloc - 10x Speed",
     },
 
     "jemalloc_10x": {
@@ -81,7 +87,8 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
+selected_replays = ["dlmalloc_10x"]
+#selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
 #selected_replays = ["crt_1x", "crt_10x", "crt_25x", "crt_max"]
 
 # Labels
@@ -188,7 +195,7 @@ def main():
             ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
             ax.set_ylabel("Alloc Time")
-            ax.set_ylim(bottom=3,top=1000*1000*1) # 1 millisecond
+            ax.set_ylim(bottom=3,top=y_max)
             ax.set_xlabel("Replay Time")
             ax.set_title(f"{title_prefix} - Allocate Memory - {chart_title}")
             ax.set_facecolor('#000000')
@@ -223,7 +230,7 @@ def main():
             ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
             ax.set_ylabel("Free Time")
-            ax.set_ylim(bottom=3, top=1000*1000*1) # 1 milliseconds
+            ax.set_ylim(bottom=3, top=y_max)
             ax.set_xlabel("Replay Time (seconds)")
             ax.set_title(f"{title_prefix} - Free Memory - {chart_title}")
             ax.set_facecolor('#000000')

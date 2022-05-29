@@ -22,6 +22,10 @@
 #define USE_CRT 0
 #endif
 
+#ifndef USE_DLMALLOC
+#define USE_DLMALLOC 0
+#endif 
+
 #ifndef USE_JEMALLOC
 #define USE_JEMALLOC 0
 #endif 
@@ -35,10 +39,13 @@
 #endif 
 
 // Allocator. Pick exactly one.
-static_assert(USE_CRT + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
+static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
 
 #if USE_CRT
 #include <stdlib.h>
+#elif USE_DLMALLOC
+#define USE_DL_PREFIX
+#include "thirdparty/dlmalloc/dlmalloc.h"
 #elif USE_JEMALLOC
 #include "thirdparty/jemalloc/include/jemalloc.h"
 #elif USE_MIMALLOC
@@ -74,6 +81,12 @@ struct Allocator {
     static inline void* alloc(size_t size) { return ::malloc(size); }
     static inline void free(void* ptr) { ::free(ptr); }
     static constexpr const char* name = "crt";
+};
+#elif USE_DLMALLOC
+struct Allocator {
+    static void* alloc(size_t size) { return dlmalloc(size); }
+    static void free(void* ptr) { dlfree(ptr); }
+    static constexpr const char* name = "dlmalloc";
 };
 #elif USE_JEMALLOC
 struct Allocator {
