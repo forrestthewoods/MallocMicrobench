@@ -19,12 +19,14 @@ y_max = 1000*1000*1
 
 # Replays
 replays = {
-
+    "crtmalloc_1x_writebyte": {
+        "csv_filename" : "doom3_replayreport_crt_1x_WriteByte.csv",
+        "chart_title" : "crtmalloc - 1x Speed - WriteByte",
+    },
     "crtalloc_10x_writenone": {
         "csv_filename" : "doom3_replayreport_crt_10x_WriteNone.csv",
         "chart_title" : "crtmalloc - 10x Speed - WriteNone",
     },
-
     "crtmalloc_10x_writebyte": {
         "csv_filename" : "doom3_replayreport_crt_10x_WriteByte.csv",
         "chart_title" : "crtmalloc - 10x Speed - WriteByte",
@@ -33,11 +35,23 @@ replays = {
         "csv_filename" : "doom3_replayreport_crt_10x_WriteAll.csv",
         "chart_title" : "crtmalloc - 10x Speed - WriteAll",
     },
+    "crtmalloc_25x_writebyte": {
+        "csv_filename" : "doom3_replayreport_crt_25x_WriteByte.csv",
+        "chart_title" : "crtmalloc - 25x Speed - WriteByte",
+    },
+    "crtmalloc_max_writebyte": {
+        "csv_filename" : "doom3_replayreport_crt_MaxSpeed_WriteByte.csv",
+        "chart_title" : "crtmalloc - Max Speed - WriteByte",
+    },
 }
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["crtalloc_10x_writenone", "crtmalloc_10x_writebyte", "crtmalloc_10x_writeall"]
+selected_replays = [
+    "crtmalloc_1x_writebyte", 
+    "crtmalloc_10x_writebyte", 
+    "crtmalloc_25x_writebyte",
+    "crtmalloc_max_writebyte",]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
