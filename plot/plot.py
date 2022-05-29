@@ -1,3 +1,4 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.ticker import FuncFormatter
@@ -11,67 +12,78 @@ import cmasher as cmr
 maxEntries = 0 # 0 = All
 fullscreen = True
 prepare_alloc_graph = True
-prepare_free_graph = True
+prepare_free_graph = False
 show_plot = True
 save_pngs = True
 y_max = 1000*1000*1
 
 # Replays
 replays = {
-    "crt_1x": {
-        "csv_filename" : "doom3_replayreport_crt_1x.csv",
-        "chart_title" : "CRT - 1x Speed",
-    },
-    "crt_10x": {
-        "csv_filename" : "doom3_replayreport_crt_10x.csv",
-        "chart_title" : "CRT - 10x Speed",
-    },
-    "crt_25x": {
-        "csv_filename" : "doom3_replayreport_crt_25x.csv",
-        "chart_title" : "CRT - 25x Speed",
-    },
-    "crt_max": {
-        "csv_filename" : "doom3_replayreport_crt_MaxSpeed.csv",
-        "chart_title" : "CRT - Max Speed",
+    # "crt_1x": {
+    #     "csv_filename" : "doom3_replayreport_crt_1x.csv",
+    #     "chart_title" : "CRT - 1x Speed",
+    # },
+    # "crt_10x": {
+    #     "csv_filename" : "doom3_replayreport_crt_10x.csv",
+    #     "chart_title" : "CRT - 10x Speed",
+    # },
+    # "crt_25x": {
+    #     "csv_filename" : "doom3_replayreport_crt_25x.csv",
+    #     "chart_title" : "CRT - 25x Speed",
+    # },
+    # "crt_max": {
+    #     "csv_filename" : "doom3_replayreport_crt_MaxSpeed.csv",
+    #     "chart_title" : "CRT - Max Speed",
+    # },
+
+    # "dlmalloc_10x": {
+    #     "csv_filename" : "doom3_replayreport_dlmalloc_10x.csv",
+    #     "chart_title" : "dlmalloc - 10x Speed",
+    # },
+
+    "jemalloc_10x_writenone": {
+        "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteNone.csv",
+        "chart_title" : "jemalloc - 10x Speed - WriteNone",
     },
 
-    "dlmalloc_10x": {
-        "csv_filename" : "doom3_replayreport_dlmalloc_10x.csv",
-        "chart_title" : "dlmalloc - 10x Speed",
-    },
-
-    "jemalloc_10x": {
+    "jemalloc_10x_writebyte": {
         "csv_filename" : "doom3_replayreport_jemalloc_10x.csv",
-        "chart_title" : "jemalloc - 10x Speed",
+        "chart_title" : "jemalloc - 10x Speed - WriteByte",
     },
 
-    "mimalloc_10x": {
-        "csv_filename" : "doom3_replayreport_mimalloc_10x.csv",
-        "chart_title" : "mimalloc - 10x Speed",
+    "jemalloc_10x_writeall": {
+        "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteAll.csv",
+        "chart_title" : "jemalloc - 10x Speed - WriteAll",
     },
 
-    "rpmalloc_10x": {
-        "csv_filename" : "doom3_replayreport_rpmalloc_10x.csv",
-        "chart_title" : "rpmalloc - 10x Speed",
-    },
+    # "mimalloc_10x": {
+    #     "csv_filename" : "doom3_replayreport_mimalloc_10x.csv",
+    #     "chart_title" : "mimalloc - 10x Speed",
+    # },
+
+    # "rpmalloc_10x": {
+    #     "csv_filename" : "doom3_replayreport_rpmalloc_10x.csv",
+    #     "chart_title" : "rpmalloc - 10x Speed",
+    # },
 
     "tlsv_10x_nowrite": {
-        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_nowrite.csv",
+        "csv_filename" : "doom3_replayreport_tlsf_25x_SingleThread_WriteNone.csv",
         "chart_title" : "tlsv - 10x Speed - SingleThreaded - NoWrite",
     },
     "tlsv_10x_writebyte": {
-        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_writebyte.csv",
+        "csv_filename" : "doom3_replayreport_tlsf_25x_SingleThread.csv",
         "chart_title" : "tlsv - 10x Speed - SingleThreaded - WriteByte",
     },
     "tlsv_10x_writeall": {
-        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_writeall.csv",
+        "csv_filename" : "doom3_replayreport_tlsf_25x_SingleThread_WriteAll.csv",
         "chart_title" : "tlsv - 10x Speed - SingleThreaded - WriteAll",
     },
 }
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["tlsv_10x_nowrite", "tlsv_10x_writebyte", "tlsv_10x_writeall"]
+selected_replays = ["jemalloc_10x_writenone"]
+#selected_replays = ["jemalloc_10x_writenone", "jemalloc_10x_writebyte", "jemalloc_10x_writeall"]
 #selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
 #selected_replays = ["crt_1x", "crt_10x", "crt_25x", "crt_max"]
 

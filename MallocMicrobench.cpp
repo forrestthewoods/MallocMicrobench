@@ -67,8 +67,11 @@ static_assert(
 // If 0 then all mallocs/free on single thread
 // If 1 then perform malloc/free on source defined thread
 #define THREADED_REPLAY 1
-#define WRITE_BYTE_PER_PAGE 1
-#define PERFORM_MEMSET 0
+
+// 0 = write nothing
+// 1 = write one byte per 4k page (counted in alloc)
+// 2 = write all bytes (not counted in alloc)
+#define WRITE_STRATEGY 2
 
 // Config
 constexpr double replaySpeed = 10.0;
@@ -350,17 +353,16 @@ int main()
                 // Perform and instrument malloc
                 auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = RdtscClock::now();
-                entry.replayPtr = Allocator::alloc(entry.allocSize);
-#if WRITE_BYTE_PER_PAGE
+                auto ptr = Allocator::alloc(entry.allocSize);
+#if WRITE_STRATEGY == 1
                 for (size_t i = 0; i < allocSize; i += 4096) {
                     *reinterpret_cast<uint8_t*>(entry.replayPtr) = 42;
                 }
+#elif WRITE_STRATEGY == 2
+                std::memset(entry.replayPtr, 42, allocSize);
 #endif
                 auto mallocEnd = RdtscClock::now();
-
-#if PERFORM_MEMSET
-                std::memset(entry.replayPtr, 0, allocSize);
-#endif
+                entry.replayPtr = ptr;
 
                 // Store malloc time
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
@@ -520,11 +522,20 @@ int main()
         std::string threadStr = "_SingleThread";
 #endif
 
-        std::string filepath = std::format("{}doom3_replayreport_{}_{}{}.csv", 
+#if WRITE_STRATEGY == 0
+        std::string writeStr = "_WriteNone";
+#elif WRITE_STRATEGY == 1
+        std::string writeStr = "";
+#elif WRITE_STRATEGY == 2
+        std::string writeStr = "_WriteAll";
+#endif
+
+        std::string filepath = std::format("{}doom3_replayreport_{}_{}{}{}.csv", 
             resultDir,
             Allocator::name,
             speedStr,
-            threadStr);
+            threadStr,
+            writeStr);
         std::cout << "Writing alloc times to: " << filepath << std::endl;
 
         std::ofstream stream(filepath);
