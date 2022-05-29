@@ -71,7 +71,7 @@ static_assert(
 // 0 = write nothing
 // 1 = write one byte per 4k page (counted in alloc)
 // 2 = write all bytes (not counted in alloc)
-#define WRITE_STRATEGY 2
+#define WRITE_STRATEGY 0
 
 // Config
 constexpr double replaySpeed = 10.0;
@@ -186,6 +186,17 @@ int main()
     std::unique_ptr<uint8_t[]> pool(new uint8_t[tlsfPoolSize]);
     Allocator::_tlsf = tlsf_create_with_pool(pool.get(), tlsfPoolSize);
 #endif
+
+#if WRITE_STRATEGY == 0
+    std::cout << "Write Strategy: NoWrite" << std::endl;
+#elif WRITE_STRATEGY == 1
+    std::cout << "Write Strategy: Write 1 per 4096" << std::endl;
+#elif WRITE_STRATEGY == 2
+    std::cout << "Write Strategy: memset all" << std::endl;
+#else
+#error Unknown memory strategy
+#endif 
+
 
     // Compute and print RDTSC information
     std::cout << "Nanoseconds per RDTSC tick: " << RdtscClock::nsPerTick() << std::endl << std::endl;
@@ -356,10 +367,10 @@ int main()
                 auto ptr = Allocator::alloc(entry.allocSize);
 #if WRITE_STRATEGY == 1
                 for (size_t i = 0; i < allocSize; i += 4096) {
-                    *reinterpret_cast<uint8_t*>(entry.replayPtr) = 42;
+                    *reinterpret_cast<uint8_t*>(ptr) = 42;
                 }
 #elif WRITE_STRATEGY == 2
-                std::memset(entry.replayPtr, 42, allocSize);
+                std::memset(ptr, 42, allocSize);
 #endif
                 auto mallocEnd = RdtscClock::now();
                 entry.replayPtr = ptr;
@@ -525,7 +536,7 @@ int main()
 #if WRITE_STRATEGY == 0
         std::string writeStr = "_WriteNone";
 #elif WRITE_STRATEGY == 1
-        std::string writeStr = "";
+        std::string writeStr = "_WriteByte";
 #elif WRITE_STRATEGY == 2
         std::string writeStr = "_WriteAll";
 #endif
