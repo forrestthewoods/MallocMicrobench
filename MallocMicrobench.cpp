@@ -43,7 +43,9 @@
 #endif 
 
 // Allocator. Pick exactly one.
-static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC + USE_TLSF == 1, "Must pick exactly one allocator");
+static_assert(
+    USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC + USE_TLSF == 1, 
+    "Must pick exactly one allocator");
 
 #if USE_CRT
 #include <stdlib.h>
@@ -64,7 +66,9 @@ static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLO
 
 // If 0 then all mallocs/free on single thread
 // If 1 then perform malloc/free on source defined thread
-#define THREADED_REPLAY 0
+#define THREADED_REPLAY 1
+#define WRITE_BYTE_PER_PAGE 1
+#define PERFORM_MEMSET 0
 
 // Config
 constexpr double replaySpeed = 10.0;
@@ -347,8 +351,16 @@ int main()
                 auto replayMallocStart = ReplayClock::now();
                 auto mallocStart = RdtscClock::now();
                 entry.replayPtr = Allocator::alloc(entry.allocSize);
+#if WRITE_BYTE_PER_PAGE
+                for (size_t i = 0; i < allocSize; i += 4096) {
+                    *reinterpret_cast<uint8_t*>(entry.replayPtr) = 42;
+                }
+#endif
                 auto mallocEnd = RdtscClock::now();
+
+#if PERFORM_MEMSET
                 std::memset(entry.replayPtr, 0, allocSize);
+#endif
 
                 // Store malloc time
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);

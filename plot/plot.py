@@ -55,15 +55,23 @@ replays = {
         "chart_title" : "rpmalloc - 10x Speed",
     },
 
-    "tlsv_10x": {
-        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread.csv",
-        "chart_title" : "tlsv - 10x Speed - SingleThreaded",
+    "tlsv_10x_nowrite": {
+        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_nowrite.csv",
+        "chart_title" : "tlsv - 10x Speed - SingleThreaded - NoWrite",
+    },
+    "tlsv_10x_writebyte": {
+        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_writebyte.csv",
+        "chart_title" : "tlsv - 10x Speed - SingleThreaded - WriteByte",
+    },
+    "tlsv_10x_writeall": {
+        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_writeall.csv",
+        "chart_title" : "tlsv - 10x Speed - SingleThreaded - WriteAll",
     },
 }
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["tlsv_10x"]
+selected_replays = ["tlsv_10x_nowrite", "tlsv_10x_writebyte", "tlsv_10x_writeall"]
 #selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
 #selected_replays = ["crt_1x", "crt_10x", "crt_25x", "crt_max"]
 
