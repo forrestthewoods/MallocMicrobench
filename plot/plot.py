@@ -13,7 +13,7 @@ fullscreen = False
 prepare_alloc_graph = True
 prepare_free_graph = False
 show_plot = True
-save_pngs = False
+save_pngs = True
 
 # Replays
 replays = {
@@ -169,13 +169,13 @@ def main():
             ax.set_title(f"{title_prefix} - Allocate Memory - {chart_title}")
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
-            
+
             if fullscreen:
                 fig.canvas.manager.full_screen_toggle()  
             
             if save_pngs:
                 save_filename = csv_filename[:-4] + "_alloc.png"
-                fig.savefig(f"screenshots/{save_filename}")
+                fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
 
         # Free times
         if prepare_free_graph:
@@ -204,13 +204,13 @@ def main():
             ax.set_title(f"{title_prefix} - Free Memory - {chart_title}")
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
-            
+
             if fullscreen:
                 fig.canvas.manager.full_screen_toggle()  
 
             if save_pngs:
                 save_filename = csv_filename[:-4] + "_free.png"
-                fig.savefig(f"screenshots/{save_filename}")
+                fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
 
     if show_plot:
         plt.show()
