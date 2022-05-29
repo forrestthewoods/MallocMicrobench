@@ -54,40 +54,16 @@ replays = {
         "csv_filename" : "doom3_replayreport_rpmalloc_10x.csv",
         "chart_title" : "rpmalloc - 10x Speed",
     },
-    
-    # "crt_0x_single": {
-    #     "csv_filename" : "doom3_replayreport_crt_MaxSpeed_SingleThread.csv",
-    #     "chart_title" : "CRT - Maximum Speed - SingleThreaded",
-    # },
-    # "crt_0x_multi": {
-    #     "csv_filename" : "doom3_replayreport_crt_MaxSpeed_MultiThread.csv",
-    #     "chart_title" : "CRT - Maximum Speed - MultiThreaded",
-    # },
-    # "crt_1x": {
-    #     "csv_filename" : "alloc_times_6min_realtimeReplay.csv",
-    #     "chart_title" : "CRT - 1x Speed",
-    # },
-    # "crt_10x_single": {
-    #     "csv_filename" : "doom3_replayreport_crt_10x_SingleThread.csv",
-    #     "chart_title" : "CRT - 10x Speed - SingleThreaded",
-    # },
-    # "crt_10x_multi": {
-    #     "csv_filename" : "doom3_replayreport_crt_10x_MultiThread.csv",
-    #     "chart_title" : "CRT - 10x Speed - MultiThreaded",
-    # },
-    # "mimalloc_10x" : {
-    #     "csv_filename" : "alloc_times_6min_10xspeed_mimalloc.csv",
-    #     "chart_title" : "mimalloc - 10x Speed",
-    # },
-    # "rpmalloc_10x" : {
-    #     "csv_filename" : "alloc_times_6min_10xspeed_rpmalloc.csv",
-    #     "chart_title" : "rpmalloc - 10x Speed",
-    # }
+
+    "tlsv_10x": {
+        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread.csv",
+        "chart_title" : "tlsv - 10x Speed - SingleThreaded",
+    },
 }
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["dlmalloc_10x"]
+selected_replays = ["tlsv_10x"]
 #selected_replays = ["jemalloc_10x", "mimalloc_10x", "rpmalloc_10x"]
 #selected_replays = ["crt_1x", "crt_10x", "crt_25x", "crt_max"]
 
@@ -224,7 +200,7 @@ def main():
                 x=freeTimestamps, 
                 y=freeTimes,
                 c=allocSizes, 
-                cmap='nipy_spectral', 
+                cmap=cmap, 
                 norm=colors.LogNorm(vmin=None,vmax=mallocMax))
             plt.semilogy(basey=10)
             ax.xaxis.set_major_formatter(FuncFormatter(x_labels))

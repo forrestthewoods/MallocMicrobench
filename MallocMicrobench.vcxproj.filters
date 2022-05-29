@@ -28,6 +28,9 @@
     <Filter Include="thirdparty\dlmalloc">
       <UniqueIdentifier>{2bd4c6fa-9737-4b6c-8b2d-1ec6288ccd23}</UniqueIdentifier>
     </Filter>
+    <Filter Include="thirdparty\tlsf">
+      <UniqueIdentifier>{90cfa51d-c777-4629-8bb3-739a8e93b08d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MallocMicrobench.cpp">
@@ -38,6 +41,9 @@
     </ClCompile>
     <ClCompile Include="thirdparty\dlmalloc\dlmalloc.c">
       <Filter>thirdparty\dlmalloc</Filter>
+    </ClCompile>
+    <ClCompile Include="thirdparty\tlsf\tlsf.c">
+      <Filter>thirdparty\tlsf</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +58,9 @@
     </ClInclude>
     <ClInclude Include="thirdparty\dlmalloc\dlmalloc.h">
       <Filter>thirdparty\dlmalloc</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\tlsf\tlsf.h">
+      <Filter>thirdparty\tlsf</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

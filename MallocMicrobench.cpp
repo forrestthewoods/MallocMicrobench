@@ -38,8 +38,12 @@
 #define USE_RPMALLOC 0
 #endif 
 
+#ifndef USE_TLSF
+#define USE_TLSF 0
+#endif 
+
 // Allocator. Pick exactly one.
-static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC == 1, "Must pick exactly one allocator");
+static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC + USE_TLSF == 1, "Must pick exactly one allocator");
 
 #if USE_CRT
 #include <stdlib.h>
@@ -47,18 +51,20 @@ static_assert(USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLO
 #define USE_DL_PREFIX
 #include "thirdparty/dlmalloc/dlmalloc.h"
 #elif USE_JEMALLOC
+// Requires precompiled dynamic lib
 #include "thirdparty/jemalloc/include/jemalloc.h"
 #elif USE_MIMALLOC
 // Requires precompiled static lib
 #include "thirdparty/mimalloc/mimalloc.h"
 #elif USE_RPMALLOC
 #include "thirdparty/rpmalloc/rpmalloc.h"
-
+#elif USE_TLSF
+#include "thirdparty/tlsf/tlsf.h"
 #endif
 
 // If 0 then all mallocs/free on single thread
 // If 1 then perform malloc/free on source defined thread
-#define THREADED_REPLAY 1
+#define THREADED_REPLAY 0
 
 // Config
 constexpr double replaySpeed = 10.0;
@@ -106,6 +112,14 @@ struct Allocator {
     static void free(void* ptr) { ::rpfree(ptr); }
     static constexpr const char* name = "rpmalloc";
 };
+#elif USE_TLSF
+struct Allocator {
+    static tlsf_t _tlsf;
+    static void* alloc(size_t size) { return tlsf_malloc(_tlsf, size); }
+    static void free(void* ptr) { return tlsf_free(_tlsf, ptr); }
+    static constexpr const char* name = "tlsf";
+};
+tlsf_t Allocator::_tlsf = nullptr;
 #else
 #error Could not pick allocator
 #endif
@@ -159,6 +173,11 @@ int main()
 #if USE_RPMALLOC
     std::cout << "Initializing rpmalloc" << std::endl << std::endl;
     rpmalloc_initialize();
+#elif USE_TLSF
+    constexpr const size_t tlsfPoolSize = 1024u * 1024u * 1024u * 3u;
+    std::cout << "Initializing tlsf. Pool size: " << formatBytes(tlsfPoolSize) << std::endl << std::endl;
+    std::unique_ptr<uint8_t[]> pool(new uint8_t[tlsfPoolSize]);
+    Allocator::_tlsf = tlsf_create_with_pool(pool.get(), tlsfPoolSize);
 #endif
 
     // Compute and print RDTSC information
@@ -329,6 +348,7 @@ int main()
                 auto mallocStart = RdtscClock::now();
                 entry.replayPtr = Allocator::alloc(entry.allocSize);
                 auto mallocEnd = RdtscClock::now();
+                std::memset(entry.replayPtr, 0, allocSize);
 
                 // Store malloc time
                 Nanoseconds mallocTime = RdtscClock::ticksToNs(mallocEnd - mallocStart);
@@ -615,6 +635,8 @@ int main()
     // Clean up memory allocators
 #if USE_RPMALLOC
     rpmalloc_finalize();
+#elif USE_TLSF
+    tlsf_destroy(Allocator::_tlsf);
 #endif
 }
 

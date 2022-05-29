@@ -13,6 +13,7 @@ Global
 		Release-jemalloc|x64 = Release-jemalloc|x64
 		Release-mimalloc|x64 = Release-mimalloc|x64
 		Release-rpmalloc|x64 = Release-rpmalloc|x64
+		Release-tlsf|x64 = Release-tlsf|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Debug-CRT|x64.ActiveCfg = Debug-CRT|x64
@@ -26,6 +27,8 @@ Global
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-mimalloc|x64.ActiveCfg = Release-mimalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-rpmalloc|x64.ActiveCfg = Release-rpmalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-rpmalloc|x64.Build.0 = Release-rpmalloc|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-tlsf|x64.ActiveCfg = Release-tlsf|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-tlsf|x64.Build.0 = Release-tlsf|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
