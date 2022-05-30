@@ -10,11 +10,12 @@ import cmasher as cmr
 
 # Config
 maxEntries = 0 # 0 = All
-fullscreen = True
-prepare_alloc_graph = True
-prepare_free_graph = True
-show_plot = False
-save_pngs = True
+fullscreen = False
+prepare_alloc_graph = False
+prepare_free_graph = False
+prepare_p99 = True
+show_plot = True
+save_pngs = False
 y_max = 1000*1000*1
 
 # Replays
@@ -68,11 +69,8 @@ replays = {
 # Replays to process
 #selected_replays = None # None = All
 selected_replays = [
-    "crtmalloc_10x_writebyte", 
-    "jemalloc_10x_writebyte", 
-    "mimalloc_10x_writebyte", 
-    "rpmalloc_10x_writebyte", 
-    "tlsf_10x_writebyte",]
+    "crtmalloc_1x_writebyte",
+]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
@@ -126,6 +124,7 @@ def main():
         print(f"Parsing data: {csv_filename}")
         allocTimestamps = []
         allocTimes = []
+        freeTimes = []
         allocSizes = []
         freeData = []
         with open(csv_filename) as csv_file:
@@ -225,6 +224,32 @@ def main():
             if save_pngs:
                 save_filename = csv_filename[:-4] + "_free.png"
                 fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
+
+        # Show malloc/free p99 time
+        if prepare_p99:
+            if len(freeTimes) == 0:
+                freeTimes = [entry[1] for entry in freeData]
+            
+            # Sort times
+            allocTimes.sort()
+            freeTimes.sort()
+
+            buckets = [float(i) for i in range(1,100)]
+            buckets.append(99.9) # 1 in 1 thousand
+            buckets.append(99.99) # 1 in 10 thousand
+            buckets.append(99.999) # 1 in 100 thousand
+            buckets.append(99.9999) # 1 in 1 million
+            buckets.append(100)
+
+            alloc_bucket_values = []
+            for bucket in buckets:
+                idx = bucket/100.0 * len(allocTimes)
+                idx = int(min(idx, len(allocTimes) - 1))
+                alloc_bucket_values.append(allocTimes[idx])
+
+            plt.plot(buckets,alloc_bucket_values)
+            plt.semilogy(basey=10)
+
 
     if show_plot:
         plt.show()
