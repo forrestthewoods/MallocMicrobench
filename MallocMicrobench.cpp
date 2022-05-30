@@ -74,7 +74,7 @@ static_assert(
 #define WRITE_STRATEGY 1
 
 // Config
-constexpr double replaySpeed = 1.0;
+constexpr double replaySpeed = 10.0;
 constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
 constexpr const char* resultDir = "c:/temp/";
 
@@ -184,6 +184,7 @@ int main()
     constexpr const size_t tlsfPoolSize = 1024u * 1024u * 1024u * 3u;
     std::cout << "Initializing tlsf. Pool size: " << formatBytes(tlsfPoolSize) << std::endl << std::endl;
     std::unique_ptr<uint8_t[]> pool(new uint8_t[tlsfPoolSize]);
+    std::memset(pool.get(), 0, tlsfPoolSize);
     Allocator::_tlsf = tlsf_create_with_pool(pool.get(), tlsfPoolSize);
 #endif
 

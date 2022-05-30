@@ -12,7 +12,7 @@ import cmasher as cmr
 maxEntries = 0 # 0 = All
 fullscreen = True
 prepare_alloc_graph = True
-prepare_free_graph = False
+prepare_free_graph = True
 show_plot = False
 save_pngs = True
 y_max = 1000*1000*1
@@ -43,15 +43,36 @@ replays = {
         "csv_filename" : "doom3_replayreport_crt_MaxSpeed_WriteByte.csv",
         "chart_title" : "crtmalloc - Max Speed - WriteByte",
     },
+
+    "jemalloc_10x_writebyte": {
+        "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteByte.csv",
+        "chart_title" : "jemalloc - 10x Speed - WriteByte",
+    },
+
+    "mimalloc_10x_writebyte": {
+        "csv_filename" : "doom3_replayreport_mimalloc_10x_WriteByte.csv",
+        "chart_title" : "mimalloc - 10x Speed - WriteByte",
+    },
+
+    "rpmalloc_10x_writebyte": {
+        "csv_filename" : "doom3_replayreport_rpmalloc_10x_WriteByte.csv",
+        "chart_title" : "rpmalloc - 10x Speed - WriteByte",
+    },
+
+    "tlsf_10x_writebyte": {
+        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_WriteByte.csv",
+        "chart_title" : "tlsf - 10x Speed - SingleThreaded - WriteByte",
+    },
 }
 
 # Replays to process
 #selected_replays = None # None = All
 selected_replays = [
-    "crtmalloc_1x_writebyte", 
     "crtmalloc_10x_writebyte", 
-    "crtmalloc_25x_writebyte",
-    "crtmalloc_max_writebyte",]
+    "jemalloc_10x_writebyte", 
+    "mimalloc_10x_writebyte", 
+    "rpmalloc_10x_writebyte", 
+    "tlsf_10x_writebyte",]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
