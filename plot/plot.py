@@ -12,10 +12,10 @@ import math
 import mpl_scatter_density
 
 # Config
-maxEntries = 100000 # 0 = All
+maxEntries = 1000 # 0 = All
 fullscreen = True
-prepare_alloc_graph = False
-prepare_free_graph = False
+prepare_alloc_graph = True
+prepare_free_graph = True
 prepare_p99 = True
 show_plot = False
 save_pngs = True
@@ -113,14 +113,8 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = [
-    "crtmalloc_1x_writebyte",
-    "dlmalloc_1x_writebyte",
-    "jemalloc_1x_writebyte",
-    "mimalloc_1x_writebyte",
-    "rpmalloc_1x_writebyte",
-    "tlsf_1x_writebyte"
-]
+selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
+percentile_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"
@@ -279,7 +273,7 @@ def main():
                 fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
 
         # Store malloc/free times for p99 plot
-        if prepare_p99:
+        if prepare_p99 and replay in percentile_replays:
             if len(freeTimes) == 0:
                 freeTimes = [entry[1] for entry in freeData]
 
@@ -291,9 +285,6 @@ def main():
                 "allocs": allocTimes,
                 "frees": freeTimes
             }
-
-
-
 
     if prepare_p99: 
         fig = plt.figure(figsize=(20,11.25))
@@ -310,7 +301,7 @@ def main():
         ax.set_facecolor('#000000')
 
         # colors from https://spectrum.adobe.com/page/color-for-data-visualization/
-        colors = ['#0fb5ae', '#4046ca', '#f68511', '#de3d82', '#7e84fa', '#72e06a']
+        p99_colors = ['#0fb5ae', '#4046ca', '#f68511', '#de3d82', '#7e84fa', '#72e06a']
         
         colorIdx = 0
         for key in p99_data:
@@ -342,7 +333,7 @@ def main():
                 idx = int(min(idx, len(allocs) - 1))
                 alloc_bucket_values.append(allocs[idx])
 
-            ax.plot(buckets,alloc_bucket_values,label=key,color=colors[colorIdx % len(colors)])
+            ax.plot(buckets,alloc_bucket_values,label=key,color=p99_colors[colorIdx % len(p99_colors)])
             colorIdx = colorIdx + 1
         
         ax.legend(loc='upper left')
@@ -355,27 +346,18 @@ def main():
             ax.set_xlim(left=0, right=101)
             fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight')
 
-            ticks = [99, 99.9, 99.99, 99.999, 99.9999, 100]
-            tick_labels = ["p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
-
-            left = 90
-            right = 100
-            def x_scale(x):
-                # map 90-100 to 90-100... but not linearlyf
-                if x < 90:
-                   return x
-                elif x < 99:
-                    return x+1
-                else:
-                    return x
-
+            #ticks = [99, 99.9, 99.99, 99.999, 99.9999, 100]
+            #tick_labels = ["p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
+            
             #plt.semilogx(basey=10)
-            ax.set_xlim(left, right)
-            ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
+            #ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
 
             #ax.set_xscale('prob')
+            
             #ax.set_xticks(ticks)
             #ax.set_xticklabels(tick_labels)
+
+            ax.set_xlim(left=90, right=101)
             fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight')
 
 
