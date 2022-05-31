@@ -66,7 +66,7 @@ static_assert(
 
 // If 0 then all mallocs/free on single thread
 // If 1 then perform malloc/free on source defined thread
-#define THREADED_REPLAY 1
+#define THREADED_REPLAY 0
 
 // 0 = write nothing
 // 1 = write one byte per 4k page (counted in alloc)
@@ -74,7 +74,7 @@ static_assert(
 #define WRITE_STRATEGY 1
 
 // Config
-constexpr double replaySpeed = 10.0;
+constexpr double replaySpeed = 1.0;
 constexpr const char* journalPath = "c:/temp/doom3_journal.txt";
 constexpr const char* resultDir = "c:/temp/";
 
