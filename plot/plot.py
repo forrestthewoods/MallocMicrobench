@@ -12,13 +12,14 @@ import math
 import mpl_scatter_density
 
 # Config
-maxEntries = 1000 # 0 = All
-fullscreen = True
+maxEntries = 0 # 0 = All
+fullscreen = False
 prepare_alloc_graph = True
-prepare_free_graph = True
+prepare_free_graph = False
 prepare_p99 = True
 show_plot = False
 save_pngs = True
+save_large_pngs = True
 y_max = 1000*1000*2
 
 # Replays
@@ -58,7 +59,7 @@ replays = {
     # dlmalloc
     "dlmalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_dlmalloc_1x_SingleThread_WriteByte.csv",
-        "chart_title" : "dlmalloc - 10x Speed - SingleThreaded - WriteByte",
+        "chart_title" : "dlmalloc - 1x Speed - SingleThreaded - WriteByte",
         "friendly_name": "dlmalloc",
     },
 
@@ -101,7 +102,7 @@ replays = {
     # tlsf
     "tlsf_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_tlsf_1x_SingleThread_WriteByte.csv",
-        "chart_title" : "tlsf - 10x Speed - SingleThreaded - WriteByte",
+        "chart_title" : "tlsf - 1x Speed - SingleThreaded - WriteByte",
         "friendly_name": "tlsf",
     },
     "tlsf_10x_writebyte": {
@@ -113,7 +114,8 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
+selected_replays = ["crtmalloc_1x_writebyte"]
+#selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 percentile_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 
 # Labels
@@ -233,9 +235,12 @@ def main():
             if fullscreen:
                 fig.canvas.manager.full_screen_toggle()  
             
+            save_filename = csv_filename[:-4] + "_alloc"
             if save_pngs:
-                save_filename = csv_filename[:-4] + "_alloc.png"
-                fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
+                fig.savefig(f"screenshots/{save_filename}.png", bbox_inches='tight', dpi=100)
+
+            if save_large_pngs:
+                fig.savefig(f"screenshots/{save_filename}_large.png", bbox_inches='tight', dpi=200)
 
         # Free times
         if prepare_free_graph:
@@ -336,28 +341,89 @@ def main():
             ax.plot(buckets,alloc_bucket_values,label=key,color=p99_colors[colorIdx % len(p99_colors)])
             colorIdx = colorIdx + 1
         
-        ax.legend(loc='upper left')
+        ax.legend(loc='upper left', prop={'size': 14})
 
         if fullscreen:
             fig.canvas.manager.full_screen_toggle()  
 
         # Save two images. One full graph, one zoomed on p95
         if save_pngs:
-            ax.set_xlim(left=0, right=101)
-            fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight')
+            # Full size
+            #ax.set_xlim(left=0, right=101)
+            #fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight')
 
-            #ticks = [99, 99.9, 99.99, 99.999, 99.9999, 100]
-            #tick_labels = ["p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
+
+            # Zoomed
+            ticks = [90, 99, 99.9, 99.99, 99.999, 99.9999, 100]
+            tick_labels = ["p90", "p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
             
-            #plt.semilogx(basey=10)
-            #ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
+            def clamp(v, min, max):
+                if v < min:
+                    return min
+                elif v > max:
+                    return max
+                else:
+                    return v
 
-            #ax.set_xscale('prob')
-            
-            #ax.set_xticks(ticks)
-            #ax.set_xticklabels(tick_labels)
+            def lerp(frac, a, b):
+                return a*(1-frac) + b*frac
 
+            def lerp_map_range(v, in_min, in_max, out_min, out_max):
+                v = clamp(v, in_min, in_max)
+                frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
+                return lerp(frac, out_min, out_max)
+
+            def log_map_range(v, in_min, in_max, out_min, out_max):
+                v = clamp(v, in_min, in_max)
+                frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
+                if frac == 0:
+                    return out_min
+                scaled_frac = math.log(lerp(frac, 1, 10), 10)
+                result = lerp(scaled_frac, out_min, out_max)
+                return result
+
+            def transform_one(value):
+                sections = 5
+                section_size = 9 / sections
+                def section_marker(i):
+                    return 90 + section_size*i
+
+                if value <= 99.0:
+                    return log_map_range(value, 90.0, 99.0, section_marker(0), section_marker(1))
+                elif value <= 99.9:
+                    return log_map_range(value, 99.0, 99.9, section_marker(1), section_marker(2))
+                elif value <= 99.99:
+                    return log_map_range(value, 99.9, 99.99, section_marker(2), section_marker(3))
+                elif value <= 99.999:
+                    return log_map_range(value, 99.99, 99.999, section_marker(3), section_marker(4))
+                elif value <= 99.9999:
+                    return log_map_range(value, 99.999, 99.9999, section_marker(4), section_marker(5))
+                else:
+                    return lerp_map_range(value, 99.9999, 100.0, section_marker(5), 100.0)
+
+            def transform_arr(values_arr):
+                return [transform_one(value) for value in values_arr]
+
+            def x_scale(values):
+                return [transform_arr(values_inner) for values_inner in values]
+
+            ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
+
+            ax.set_xticks(ticks)
+            ax.set_xticklabels(tick_labels)
             ax.set_xlim(left=90, right=101)
+
+            def xlabel_helper(tick, pos):
+                return ''
+            ax.xaxis.set_minor_formatter(FuncFormatter(xlabel_helper))
+            ax.xaxis.set_minor_locator(plt.FixedLocator([
+                91,92,93,94,95,96,97,98,
+                99.1, 99.2, 99.3, 99.4, 99.5, 99.6, 99.7, 99.8,
+                99.91, 99.92, 99.93, 99.94, 99.95, 99.96, 99.97, 99.98,
+                99.991, 99.992, 99.993, 99.994, 99.995, 99.996, 99.997, 99.998,
+                99.9991, 99.9992, 99.9993, 99.9994, 99.9995, 99.9996, 99.9997, 99.9998,
+                ]))
+
             fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight')
 
 
