@@ -352,62 +352,6 @@ def main():
 
         # Save two images. One full graph, one zoomed on p95
         if save_pngs:
-
-#----------------------------
-            # https://matplotlib.org/stable/gallery/scales/custom_scale.html
-            class ProjectionScale(mscale.ScaleBase):
-                name = 'projection_scale'
-
-                def __init__(self, axis, *, **kwargs):
-                    super().__init__(axis)
-
-                def get_transform(self):
-                    return self.ProjectionScaleTransform()
-
-                def set_default_locators_and_formatters(self, axis):
-                    pass
-
-                def limit_range_for_scale(self, vmin, vmax, minpos):
-                    return (vmin, vmax)
-
-                class ProjectionScaleTransform(mtransforms.Transform):
-                    input_dims = output_dims = 1
-
-                    def __init__(self):
-                        mtransforms.Transform.__init__(self)
-
-                    def transform_non_affine(self, a):
-                        masked = ma.masked_where((a < -self.thresh) | (a > self.thresh), a)
-                        if masked.mask.any():
-                            return ma.log(np.abs(ma.tan(masked) + 1 / ma.cos(masked)))
-                        else:
-                            return np.log(np.abs(np.tan(a) + 1 / np.cos(a)))
-
-                    def inverted(self):
-                        return MercatorLatitudeScale.InvertedMercatorLatitudeTransform(
-                            self.thresh)
-
-                class InvertedMercatorLatitudeTransform(mtransforms.Transform):
-                    input_dims = output_dims = 1
-
-                    def __init__(self, thresh):
-                        mtransforms.Transform.__init__(self)
-                        self.thresh = thresh
-
-                    def transform_non_affine(self, a):
-                        return np.arctan(np.sinh(a))
-
-                    def inverted(self):
-                        return MercatorLatitudeScale.MercatorLatitudeTransform(self.thresh)
-
-
-            # Now that the Scale class has been defined, it must be registered so
-            # that Matplotlib can find it.
-            mscale.register_scale(MercatorLatitudeScale)
-
-#----------------------------
-
-            
             ax.set_xlim(left=0, right=101)
             fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight')
 
