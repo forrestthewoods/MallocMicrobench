@@ -20,7 +20,7 @@ show_plot = False
 save_pngs = True
 save_large_pngs = True
 y_max = 1000*1000*2
-dpi_lo = 100
+dpi_lo = 80
 dpi_hi = 200
 
 # Replays
@@ -115,6 +115,7 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
+#selected_replays = ["crtmalloc_1x_writebyte"]
 selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 percentile_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 
@@ -289,6 +290,23 @@ def main():
             }
 
     if prepare_p99: 
+        # Utility
+        def clamp(v, min, max):
+            if v < min:
+                return min
+            elif v > max:
+                return max
+            else:
+                return v
+
+        def lerp(frac, a, b):
+            return a*(1-frac) + b*frac
+
+        def lerp_map_range(v, in_min, in_max, out_min, out_max):
+            v = clamp(v, in_min, in_max)
+            frac = clamp(float(v - in_min) / float(in_max - in_min), 0.0, 1.0)
+            return lerp(frac, out_min, out_max)
+
         fig = plt.figure(figsize=(20,11.25))
         ax = fig.add_subplot()
 
@@ -321,6 +339,16 @@ def main():
             appendHelper(99.9, 99.99, 0.01)
             appendHelper(99.99, 99.999, 0.001)
             appendHelper(99.999, 99.9999, 0.0001)
+
+            # Lerp all values from p99.9999 to p100
+            p_lo = 99.9999
+            p_hi = 100.0
+            idx_lo = int(p_lo/100 * len(allocs))
+            idx_hi = len(allocs) - 1
+            for idx in range(idx_lo, idx_hi + 1):
+                p = lerp_map_range(idx, idx_lo, idx_hi, p_lo, p_hi)
+                buckets.append(p)
+
             buckets.append(100)
 
             # TODO: insert all points between 99.9999 and 100
@@ -343,25 +371,11 @@ def main():
 
             if save_pngs:
                 fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight', dpi=dpi_lo)
-
+            
+            if save_large_pngs:
+                fig.savefig(f"screenshots/percentile_alloc_large.png", bbox_inches='tight', dpi=dpi_hi)
 
             # Zoom image
-            def clamp(v, min, max):
-                if v < min:
-                    return min
-                elif v > max:
-                    return max
-                else:
-                    return v
-
-            def lerp(frac, a, b):
-                return a*(1-frac) + b*frac
-
-            def lerp_map_range(v, in_min, in_max, out_min, out_max):
-                v = clamp(v, in_min, in_max)
-                frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
-                return lerp(frac, out_min, out_max)
-
             def log_map_range(v, in_min, in_max, out_min, out_max):
                 v = clamp(v, in_min, in_max)
                 frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
@@ -417,8 +431,11 @@ def main():
                 99.9991, 99.9992, 99.9993, 99.9994, 99.9995, 99.9996, 99.9997, 99.9998,
                 ]))
 
+            if save_pngs:
+                fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight', dpi=dpi_lo)
+
             if save_large_pngs:
-                fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight', dpi=dpi_hi)
+                fig.savefig(f"screenshots/percentile_alloc_zoomed_large.png", bbox_inches='tight', dpi=dpi_hi)
 
 
     if show_plot:
