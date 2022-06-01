@@ -13,7 +13,7 @@ import mpl_scatter_density
 
 # Config
 maxEntries = 0 # 0 = All
-prepare_alloc_graph = False
+prepare_alloc_graph = True
 prepare_free_graph = False
 prepare_p99 = True
 show_plot = False
@@ -62,6 +62,13 @@ replays = {
         "csv_filename" : "doom3_replayreport_dlmalloc_1x_SingleThread_WriteByte.csv",
         "chart_title" : "dlmalloc - 1x Speed - SingleThreaded - WriteByte",
         "friendly_name": "dlmalloc",
+    },
+
+    # HeapAlloc
+    "HeapAlloc_1x_writebyte": {
+        "csv_filename" : "doom3_replayreport_HeapAlloc_1x_WriteByte.csv",
+        "chart_title" : "HeapAlloc - 1x Speed - WriteByte",
+        "friendly_name": "HeapAlloc",
     },
 
     # jemalloc
@@ -115,9 +122,16 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
-#selected_replays = ["crtmalloc_1x_writebyte"]
-selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
-percentile_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
+selected_replays = ["crtmalloc_1x_writebyte", "HeapAlloc_1x_writebyte"]
+#selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
+percentile_replays = [
+    "crtmalloc_1x_writebyte", 
+    "dlmalloc_1x_writebyte",  
+    "HeapAlloc_1x_writebyte", 
+    "jemalloc_1x_writebyte", 
+    "mimalloc_1x_writebyte", 
+    "rpmalloc_1x_writebyte", 
+    "tlsf_1x_writebyte"]
 
 # Labels
 title_prefix = "Doom 3 Memory Analysis"

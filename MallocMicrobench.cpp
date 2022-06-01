@@ -26,6 +26,10 @@
 #define USE_DLMALLOC 0
 #endif 
 
+#ifndef USE_HEAPALLOC
+#define USE_HEAPALLOC 0
+#endif
+
 #ifndef USE_JEMALLOC
 #define USE_JEMALLOC 0
 #endif 
@@ -44,7 +48,7 @@
 
 // Allocator. Pick exactly one.
 static_assert(
-    USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_MIMALLOC + USE_RPMALLOC + USE_TLSF == 1, 
+    USE_CRT + USE_DLMALLOC + USE_JEMALLOC + USE_HEAPALLOC + USE_MIMALLOC + USE_RPMALLOC + USE_TLSF == 1, 
     "Must pick exactly one allocator");
 
 #if USE_CRT
@@ -52,6 +56,11 @@ static_assert(
 #elif USE_DLMALLOC
 #define USE_DL_PREFIX
 #include "thirdparty/dlmalloc/dlmalloc.h"
+#elif USE_HEAPALLOC
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#undef max
+#undef min
 #elif USE_JEMALLOC
 // Requires precompiled dynamic lib
 #include "thirdparty/jemalloc/include/jemalloc.h"
@@ -66,7 +75,7 @@ static_assert(
 
 // If 0 then all mallocs/free on single thread
 // If 1 then perform malloc/free on source defined thread
-#define THREADED_REPLAY 0
+#define THREADED_REPLAY 1
 
 // 0 = write nothing
 // 1 = write one byte per 4k page (counted in alloc)
@@ -100,6 +109,12 @@ struct Allocator {
     static void* alloc(size_t size) { return dlmalloc(size); }
     static void free(void* ptr) { dlfree(ptr); }
     static constexpr const char* name = "dlmalloc";
+};
+#elif USE_HEAPALLOC
+struct Allocator {
+    static inline void* alloc(size_t size) { return ::HeapAlloc(GetProcessHeap(), 0, size); }
+    static inline void free(void* ptr) { ::HeapFree(GetProcessHeap(), 0, ptr); }
+    static constexpr const char* name = "HeapAlloc";
 };
 #elif USE_JEMALLOC
 struct Allocator {

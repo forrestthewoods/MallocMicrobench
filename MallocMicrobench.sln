@@ -10,6 +10,7 @@ Global
 		Debug-CRT|x64 = Debug-CRT|x64
 		Release-CRT|x64 = Release-CRT|x64
 		Release-dlmalloc|x64 = Release-dlmalloc|x64
+		Release-HeapAlloc|x64 = Release-HeapAlloc|x64
 		Release-jemalloc|x64 = Release-jemalloc|x64
 		Release-mimalloc|x64 = Release-mimalloc|x64
 		Release-rpmalloc|x64 = Release-rpmalloc|x64
@@ -22,6 +23,8 @@ Global
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-CRT|x64.Build.0 = Release-CRT|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-dlmalloc|x64.ActiveCfg = Release-dlmalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-dlmalloc|x64.Build.0 = Release-dlmalloc|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-HeapAlloc|x64.ActiveCfg = Release-HeapAlloc|x64
+		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-HeapAlloc|x64.Build.0 = Release-HeapAlloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-jemalloc|x64.ActiveCfg = Release-jemalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-jemalloc|x64.Build.0 = Release-jemalloc|x64
 		{42F05E27-F781-4641-9075-D351547BE8D4}.Release-mimalloc|x64.ActiveCfg = Release-mimalloc|x64
