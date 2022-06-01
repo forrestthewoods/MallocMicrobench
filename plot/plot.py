@@ -13,14 +13,15 @@ import mpl_scatter_density
 
 # Config
 maxEntries = 0 # 0 = All
-fullscreen = False
-prepare_alloc_graph = True
+prepare_alloc_graph = False
 prepare_free_graph = False
 prepare_p99 = True
 show_plot = False
 save_pngs = True
 save_large_pngs = True
 y_max = 1000*1000*2
+dpi_lo = 100
+dpi_hi = 200
 
 # Replays
 replays = {
@@ -114,8 +115,7 @@ replays = {
 
 # Replays to process
 #selected_replays = None # None = All
-selected_replays = ["crtmalloc_1x_writebyte"]
-#selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
+selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 percentile_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 
 # Labels
@@ -232,15 +232,12 @@ def main():
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
 
-            if fullscreen:
-                fig.canvas.manager.full_screen_toggle()  
-            
             save_filename = csv_filename[:-4] + "_alloc"
             if save_pngs:
-                fig.savefig(f"screenshots/{save_filename}.png", bbox_inches='tight', dpi=100)
+                fig.savefig(f"screenshots/{save_filename}.png", bbox_inches='tight', dpi=dpi_lo)
 
             if save_large_pngs:
-                fig.savefig(f"screenshots/{save_filename}_large.png", bbox_inches='tight', dpi=200)
+                fig.savefig(f"screenshots/{save_filename}_large.png", bbox_inches='tight', dpi=dpi_hi)
 
         # Free times
         if prepare_free_graph:
@@ -270,12 +267,12 @@ def main():
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
 
-            if fullscreen:
-                fig.canvas.manager.full_screen_toggle()  
-
+            save_filename = csv_filename[:-4] + "_free"
             if save_pngs:
-                save_filename = csv_filename[:-4] + "_free.png"
-                fig.savefig(f"screenshots/{save_filename}", bbox_inches='tight')
+                fig.savefig(f"screenshots/{save_filename}.png", bbox_inches='tight', dpi=dpi_lo)
+
+            if save_large_pngs:
+                fig.savefig(f"screenshots/{save_filename}_large.png", bbox_inches='tight', dpi=dpi_hi)
 
         # Store malloc/free times for p99 plot
         if prepare_p99 and replay in percentile_replays:
@@ -313,24 +310,20 @@ def main():
             allocs = p99_data[key]["allocs"]
 
             buckets = []
-            i = 1.0
 
+            # Carefully define buckets
             def appendHelper(min, max, step):
                 i = min
                 while i < max:
                     buckets.append(i)
                     i += step
-
             appendHelper(1.0, 99.9, 0.1)
             appendHelper(99.9, 99.99, 0.01)
             appendHelper(99.99, 99.999, 0.001)
             appendHelper(99.999, 99.9999, 0.0001)
             buckets.append(100)
 
-            # print("buckets")
-            # for bucket in buckets:
-            #     if bucket > 98.0:
-            #         print(f"  {bucket}")
+            # TODO: insert all points between 99.9999 and 100
 
             alloc_bucket_values = []
             for bucket in buckets:
@@ -343,20 +336,16 @@ def main():
         
         ax.legend(loc='upper left', prop={'size': 14})
 
-        if fullscreen:
-            fig.canvas.manager.full_screen_toggle()  
-
         # Save two images. One full graph, one zoomed on p95
         if save_pngs:
             # Full size
-            #ax.set_xlim(left=0, right=101)
-            #fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight')
+            ax.set_xlim(left=0, right=101)
+
+            if save_pngs:
+                fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight', dpi=dpi_lo)
 
 
-            # Zoomed
-            ticks = [90, 99, 99.9, 99.99, 99.999, 99.9999, 100]
-            tick_labels = ["p90", "p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
-            
+            # Zoom image
             def clamp(v, min, max):
                 if v < min:
                     return min
@@ -408,11 +397,15 @@ def main():
                 return [transform_arr(values_inner) for values_inner in values]
 
             ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
-
+            
+            # Set major ticks
+            ticks = [90, 99, 99.9, 99.99, 99.999, 99.9999, 100]
+            tick_labels = ["p90", "p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
             ax.set_xticks(ticks)
             ax.set_xticklabels(tick_labels)
             ax.set_xlim(left=90, right=101)
 
+            # Set minor ticks
             def xlabel_helper(tick, pos):
                 return ''
             ax.xaxis.set_minor_formatter(FuncFormatter(xlabel_helper))
@@ -424,7 +417,8 @@ def main():
                 99.9991, 99.9992, 99.9993, 99.9994, 99.9995, 99.9996, 99.9997, 99.9998,
                 ]))
 
-            fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight')
+            if save_large_pngs:
+                fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight', dpi=dpi_hi)
 
 
     if show_plot:
