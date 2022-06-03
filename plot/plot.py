@@ -14,7 +14,7 @@ import mpl_scatter_density
 # Config
 maxEntries = 0 # 0 = All
 prepare_alloc_graph = True
-prepare_free_graph = False
+prepare_free_graph = True
 prepare_p99 = True
 show_plot = False
 save_pngs = True
@@ -22,107 +22,110 @@ save_large_pngs = True
 y_max = 1000*1000*2
 dpi_lo = 80
 dpi_hi = 200
+title_fontsize = 36
+xaxis_fontsize = 20
 
 # Replays
 replays = {
     # CRT
     "crtmalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_crt_1x_WriteByte.csv",
-        "chart_title" : "crtmalloc - 1x Speed - WriteByte",
+        "chart_title" : "crt",
         "friendly_name": "crt",
     },
-    "crtalloc_10x_writenone": {
-        "csv_filename" : "doom3_replayreport_crt_10x_WriteNone.csv",
-        "chart_title" : "crtmalloc - 10x Speed - WriteNone",
+    "crtalloc_1x_writenone": {
+        "csv_filename" : "doom3_replayreport_crt_1x_WriteNone.csv",
+        "chart_title" : "crt - 10x Speed",
+        "friendly_name": "crt",
+    },
+    "crtmalloc_1x_writeall": {
+        "csv_filename" : "doom3_replayreport_crt_1x_WriteAll.csv",
+        "chart_title" : "crt",
         "friendly_name": "crt",
     },
     "crtmalloc_10x_writebyte": {
         "csv_filename" : "doom3_replayreport_crt_10x_WriteByte.csv",
-        "chart_title" : "crtmalloc - 10x Speed - WriteByte",
-        "friendly_name": "crt",
-    },
-    "crtmalloc_10x_writeall": {
-        "csv_filename" : "doom3_replayreport_crt_10x_WriteAll.csv",
-        "chart_title" : "crtmalloc - 10x Speed - WriteAll",
+        "chart_title" : "crt - 10x Speed",
         "friendly_name": "crt",
     },
     "crtmalloc_25x_writebyte": {
         "csv_filename" : "doom3_replayreport_crt_25x_WriteByte.csv",
-        "chart_title" : "crtmalloc - 25x Speed - WriteByte",
+        "chart_title" : "crt - 25x Speed",
         "friendly_name": "crt",
     },
     "crtmalloc_max_writebyte": {
         "csv_filename" : "doom3_replayreport_crt_MaxSpeed_WriteByte.csv",
-        "chart_title" : "crtmalloc - Max Speed - WriteByte",
+        "chart_title" : "crt - Max Speed",
         "friendly_name": "crt",
     },
 
     # dlmalloc
     "dlmalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_dlmalloc_1x_SingleThread_WriteByte.csv",
-        "chart_title" : "dlmalloc - 1x Speed - SingleThreaded - WriteByte",
+        "chart_title" : "dlmalloc",
         "friendly_name": "dlmalloc",
     },
 
     # HeapAlloc
     "HeapAlloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_HeapAlloc_1x_WriteByte.csv",
-        "chart_title" : "HeapAlloc - 1x Speed - WriteByte",
+        "chart_title" : "HeapAlloc",
         "friendly_name": "HeapAlloc",
     },
 
     # jemalloc
     "jemalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_jemalloc_1x_WriteByte.csv",
-        "chart_title" : "jemalloc - 1x Speed - WriteByte",
+        "chart_title" : "jemalloc",
         "friendly_name": "jemalloc",
     },
-    "jemalloc_10x_writebyte": {
-        "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteByte.csv",
-        "chart_title" : "jemalloc - 10x Speed - WriteByte",
-        "friendly_name": "jemalloc",
-    },
+    # "jemalloc_10x_writebyte": {
+    #     "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteByte.csv",
+    #     "chart_title" : "jemalloc - 10x Speed",
+    #     "friendly_name": "jemalloc",
+    # },
 
     # mimalloc
     "mimalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_mimalloc_1x_WriteByte.csv",
-        "chart_title" : "mimalloc - 1x Speed - WriteByte",
+        "chart_title" : "mimalloc",
         "friendly_name": "mimalloc",
     },
-    "mimalloc_10x_writebyte": {
-        "csv_filename" : "doom3_replayreport_mimalloc_10x_WriteByte.csv",
-        "chart_title" : "mimalloc - 10x Speed - WriteByte",
-        "friendly_name": "mimalloc",
-    },
+    # "mimalloc_10x_writebyte": {
+    #     "csv_filename" : "doom3_replayreport_mimalloc_10x_WriteByte.csv",
+    #     "chart_title" : "mimalloc - 10x Speed",
+    #     "friendly_name": "mimalloc",
+    # },
 
     # rpmalloc
     "rpmalloc_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_rpmalloc_1x_WriteByte.csv",
-        "chart_title" : "rpmalloc - 1x Speed - WriteByte",
+        "chart_title" : "rpmalloc",
         "friendly_name": "rpmalloc",
     },
-    "rpmalloc_10x_writebyte": {
-        "csv_filename" : "doom3_replayreport_rpmalloc_10x_WriteByte.csv",
-        "chart_title" : "rpmalloc - 10x Speed - WriteByte",
-        "friendly_name": "rpmalloc",
-    },
+    # "rpmalloc_10x_writebyte": {
+    #     "csv_filename" : "doom3_replayreport_rpmalloc_10x_WriteByte.csv",
+    #     "chart_title" : "rpmalloc",
+    #     "friendly_name": "rpmalloc",
+    # },
 
     # tlsf
     "tlsf_1x_writebyte": {
         "csv_filename" : "doom3_replayreport_tlsf_1x_SingleThread_WriteByte.csv",
-        "chart_title" : "tlsf - 1x Speed - SingleThreaded - WriteByte",
+        "chart_title" : "tlsf",
         "friendly_name": "tlsf",
     },
-    "tlsf_10x_writebyte": {
-        "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_WriteByte.csv",
-        "chart_title" : "tlsf - 10x Speed - SingleThreaded - WriteByte",
-        "friendly_name": "tlsf",
-    },
+    # "tlsf_10x_writebyte": {
+    #     "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_WriteByte.csv",
+    #     "chart_title" : "tlsf",
+    #     "friendly_name": "tlsf",
+    # },
 }
 
 # Replays to process
-#selected_replays = None # None = All
-selected_replays = ["crtmalloc_1x_writebyte", "HeapAlloc_1x_writebyte"]
+selected_replays = None # None = All
+#selected_replays = ["crtmalloc_1x_writebyte"]
+#selected_replays = ["crtmalloc_1x_writebyte", "HeapAlloc_1x_writebyte"]
 #selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 percentile_replays = [
     "crtmalloc_1x_writebyte", 
@@ -133,8 +136,6 @@ percentile_replays = [
     "rpmalloc_1x_writebyte", 
     "tlsf_1x_writebyte"]
 
-# Labels
-title_prefix = "Doom 3 Memory Analysis"
 
 # Constants
 kilobyte = 1024.0
@@ -242,8 +243,8 @@ def main():
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
             ax.set_ylabel("Alloc Time")
             ax.set_ylim(bottom=3,top=y_max)
-            ax.set_xlabel("Replay Time")
-            ax.set_title(f"{title_prefix} - Allocate Memory - {chart_title}")
+            ax.set_xlabel("Replay Time", fontsize=xaxis_fontsize)
+            ax.set_title(f"{chart_title} - alloc", fontsize=title_fontsize)
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
 
@@ -277,8 +278,8 @@ def main():
             ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
             ax.set_ylabel("Free Time")
             ax.set_ylim(bottom=3, top=y_max)
-            ax.set_xlabel("Replay Time")
-            ax.set_title(f"{title_prefix} - Free Memory - {chart_title}")
+            ax.set_xlabel("Replay Time", fontsize=xaxis_fontsize)
+            ax.set_title(f"{chart_title} - free", fontsize=title_fontsize)
             ax.set_facecolor('#000000')
             fig.colorbar(density, ticks=cbar_ticks, format=ColorbarFormatter())
 
@@ -321,136 +322,137 @@ def main():
             frac = clamp(float(v - in_min) / float(in_max - in_min), 0.0, 1.0)
             return lerp(frac, out_min, out_max)
 
-        fig = plt.figure(figsize=(20,11.25))
-        ax = fig.add_subplot()
+        for i in range(2):
+            fig = plt.figure(figsize=(20,11.25))
+            ax = fig.add_subplot()
 
-        plt.semilogy(basey=10)
-        #ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
-        ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
-        ax.set_ylabel("Alloc Time")
-        ax.set_xlim(left=0, right=101)
-        ax.set_ylim(bottom=3, top=y_max)
-        ax.set_xlabel("Percentile")
-        ax.set_title(f"Alloc Time (Percentile)")
-        ax.set_facecolor('#000000')
-
-        # colors from https://spectrum.adobe.com/page/color-for-data-visualization/
-        p99_colors = ['#0fb5ae', '#4046ca', '#f68511', '#de3d82', '#7e84fa', '#72e06a']
-        
-        colorIdx = 0
-        for key in p99_data:
-            allocs = p99_data[key]["allocs"]
-
-            buckets = []
-
-            # Carefully define buckets
-            def appendHelper(min, max, step):
-                i = min
-                while i < max:
-                    buckets.append(i)
-                    i += step
-            appendHelper(1.0, 99.9, 0.1)
-            appendHelper(99.9, 99.99, 0.01)
-            appendHelper(99.99, 99.999, 0.001)
-            appendHelper(99.999, 99.9999, 0.0001)
-
-            # Lerp all values from p99.9999 to p100
-            p_lo = 99.9999
-            p_hi = 100.0
-            idx_lo = int(p_lo/100 * len(allocs))
-            idx_hi = len(allocs) - 1
-            for idx in range(idx_lo, idx_hi + 1):
-                p = lerp_map_range(idx, idx_lo, idx_hi, p_lo, p_hi)
-                buckets.append(p)
-
-            buckets.append(100)
-
-            # TODO: insert all points between 99.9999 and 100
-
-            alloc_bucket_values = []
-            for bucket in buckets:
-                idx = bucket/100.0 * len(allocs)
-                idx = int(min(idx, len(allocs) - 1))
-                alloc_bucket_values.append(allocs[idx])
-
-            ax.plot(buckets,alloc_bucket_values,label=key,color=p99_colors[colorIdx % len(p99_colors)])
-            colorIdx = colorIdx + 1
-        
-        ax.legend(loc='upper left', prop={'size': 14})
-
-        # Save two images. One full graph, one zoomed on p95
-        if save_pngs:
-            # Full size
+            plt.semilogy(basey=10)
+            #ax.xaxis.set_major_formatter(FuncFormatter(x_labels))
+            ax.yaxis.set_major_formatter(FuncFormatter(y_labels))
+            ax.set_ylabel("Alloc Time")
             ax.set_xlim(left=0, right=101)
+            ax.set_ylim(bottom=3, top=y_max)
+            ax.set_xlabel("Percentile", fontsize=xaxis_fontsize)
+            ax.set_title(f"Alloc Time (Percentile)", fontsize=title_fontsize)
+            ax.set_facecolor('#000000')
+            ax.tick_params(axis='x', labelsize=xaxis_fontsize-2)
 
-            if save_pngs:
-                fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight', dpi=dpi_lo)
+            # colors from https://spectrum.adobe.com/page/color-for-data-visualization/
+            p99_colors = ['#0fb5ae', '#4046ca', '#f68511', '#de3d82', '#7e84fa', '#72e06a']
             
-            if save_large_pngs:
-                fig.savefig(f"screenshots/percentile_alloc_large.png", bbox_inches='tight', dpi=dpi_hi)
+            colorIdx = 0
+            for key in p99_data:
+                allocs = p99_data[key]["allocs"]
 
-            # Zoom image
-            def log_map_range(v, in_min, in_max, out_min, out_max):
-                v = clamp(v, in_min, in_max)
-                frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
-                if frac == 0:
-                    return out_min
-                scaled_frac = math.log(lerp(frac, 1, 10), 10)
-                result = lerp(scaled_frac, out_min, out_max)
-                return result
+                buckets = []
 
-            def transform_one(value):
-                sections = 5
-                section_size = 9 / sections
-                def section_marker(i):
-                    return 90 + section_size*i
+                # Carefully define buckets
+                def appendHelper(min, max, step):
+                    i = min
+                    while i < max:
+                        buckets.append(i)
+                        i += step
+                appendHelper(1.0, 99.9, 0.1)
+                appendHelper(99.9, 99.99, 0.01)
+                appendHelper(99.99, 99.999, 0.001)
+                appendHelper(99.999, 99.9999, 0.0001)
 
-                if value <= 99.0:
-                    return log_map_range(value, 90.0, 99.0, section_marker(0), section_marker(1))
-                elif value <= 99.9:
-                    return log_map_range(value, 99.0, 99.9, section_marker(1), section_marker(2))
-                elif value <= 99.99:
-                    return log_map_range(value, 99.9, 99.99, section_marker(2), section_marker(3))
-                elif value <= 99.999:
-                    return log_map_range(value, 99.99, 99.999, section_marker(3), section_marker(4))
-                elif value <= 99.9999:
-                    return log_map_range(value, 99.999, 99.9999, section_marker(4), section_marker(5))
-                else:
-                    return lerp_map_range(value, 99.9999, 100.0, section_marker(5), 100.0)
+                # Lerp all values from p99.9999 to p100
+                p_lo = 99.9999
+                p_hi = 100.0
+                idx_lo = int(p_lo/100 * len(allocs))
+                idx_hi = len(allocs) - 1
+                for idx in range(idx_lo+1, idx_hi + 1):
+                    p = lerp_map_range(idx, idx_lo, idx_hi, p_lo, p_hi)
+                    buckets.append(p)
 
-            def transform_arr(values_arr):
-                return [transform_one(value) for value in values_arr]
+                # Add end point
+                #buckets.append(100)
 
-            def x_scale(values):
-                return [transform_arr(values_inner) for values_inner in values]
+                alloc_bucket_values = []
+                for bucket in buckets:
+                    idx = bucket/100.0 * len(allocs)
+                    idx = int(min(idx, len(allocs) - 1))
+                    alloc_bucket_values.append(allocs[idx])
 
-            ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
+                ax.plot(buckets,alloc_bucket_values,label=key,color=p99_colors[colorIdx % len(p99_colors)])
+                colorIdx = colorIdx + 1
             
-            # Set major ticks
-            ticks = [90, 99, 99.9, 99.99, 99.999, 99.9999, 100]
-            tick_labels = ["p90", "p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
-            ax.set_xticks(ticks)
-            ax.set_xticklabels(tick_labels)
-            ax.set_xlim(left=90, right=101)
+            ax.legend(loc='upper left', prop={'size': 14})
 
-            # Set minor ticks
-            def xlabel_helper(tick, pos):
-                return ''
-            ax.xaxis.set_minor_formatter(FuncFormatter(xlabel_helper))
-            ax.xaxis.set_minor_locator(plt.FixedLocator([
-                91,92,93,94,95,96,97,98,
-                99.1, 99.2, 99.3, 99.4, 99.5, 99.6, 99.7, 99.8,
-                99.91, 99.92, 99.93, 99.94, 99.95, 99.96, 99.97, 99.98,
-                99.991, 99.992, 99.993, 99.994, 99.995, 99.996, 99.997, 99.998,
-                99.9991, 99.9992, 99.9993, 99.9994, 99.9995, 99.9996, 99.9997, 99.9998,
-                ]))
+            if i == 0:
+                # Full size
+                ax.set_xlim(left=0, right=101)
 
-            if save_pngs:
-                fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight', dpi=dpi_lo)
+                if save_pngs:
+                    fig.savefig(f"screenshots/percentile_alloc.png", bbox_inches='tight', dpi=dpi_lo)
+                
+                if save_large_pngs:
+                    fig.savefig(f"screenshots/percentile_alloc_large.png", bbox_inches='tight', dpi=dpi_hi)
 
-            if save_large_pngs:
-                fig.savefig(f"screenshots/percentile_alloc_zoomed_large.png", bbox_inches='tight', dpi=dpi_hi)
+               
+            else:
+                # Zoom image
+                def log_map_range(v, in_min, in_max, out_min, out_max):
+                    v = clamp(v, in_min, in_max)
+                    frac = clamp((v - in_min) / (in_max - in_min), 0.0, 1.0)
+                    if frac == 0:
+                        return out_min
+                    scaled_frac = math.log(lerp(frac, 1, 10), 10)
+                    result = lerp(scaled_frac, out_min, out_max)
+                    return result
 
+                def transform_one(value):
+                    sections = 5
+                    section_size = 9 / sections
+                    def section_marker(i):
+                        return 90 + section_size*i
+
+                    if value <= 99.0:
+                        return log_map_range(value, 90.0, 99.0, section_marker(0), section_marker(1))
+                    elif value <= 99.9:
+                        return log_map_range(value, 99.0, 99.9, section_marker(1), section_marker(2))
+                    elif value <= 99.99:
+                        return log_map_range(value, 99.9, 99.99, section_marker(2), section_marker(3))
+                    elif value <= 99.999:
+                        return log_map_range(value, 99.99, 99.999, section_marker(3), section_marker(4))
+                    elif value <= 99.9999:
+                        return log_map_range(value, 99.999, 99.9999, section_marker(4), section_marker(5))
+                    else:
+                        return lerp_map_range(value, 99.9999, 100.0, section_marker(5), 100.0)
+
+                def transform_arr(values_arr):
+                    return [transform_one(value) for value in values_arr]
+
+                def x_scale(values):
+                    return [transform_arr(values_inner) for values_inner in values]
+
+                ax.set_xscale('functionlog', functions=[lambda x: x_scale(x), lambda x: x])
+                
+                # Set major ticks
+                ticks = [90, 99, 99.9, 99.99, 99.999, 99.9999, 100]
+                tick_labels = ["p90", "p99", "p99.9", "p99.99", "p99.999", "p99.9999", "p100"]
+                ax.set_xticks(ticks)
+                ax.set_xticklabels(tick_labels, fontsize=xaxis_fontsize-2)
+                ax.set_xlim(left=90, right=101)
+
+                # Set minor ticks
+                def xlabel_helper(tick, pos):
+                    return ''
+                ax.xaxis.set_minor_formatter(FuncFormatter(xlabel_helper))
+                ax.xaxis.set_minor_locator(plt.FixedLocator([
+                    91,92,93,94,95,96,97,98,
+                    99.1, 99.2, 99.3, 99.4, 99.5, 99.6, 99.7, 99.8,
+                    99.91, 99.92, 99.93, 99.94, 99.95, 99.96, 99.97, 99.98,
+                    99.991, 99.992, 99.993, 99.994, 99.995, 99.996, 99.997, 99.998,
+                    99.9991, 99.9992, 99.9993, 99.9994, 99.9995, 99.9996, 99.9997, 99.9998,
+                    ]))
+
+                if save_pngs:
+                    fig.savefig(f"screenshots/percentile_alloc_zoomed.png", bbox_inches='tight', dpi=dpi_lo)
+
+                if save_large_pngs:
+                    fig.savefig(f"screenshots/percentile_alloc_zoomed_large.png", bbox_inches='tight', dpi=dpi_hi)
 
     if show_plot:
         plt.show()
@@ -458,3 +460,4 @@ def main():
 if __name__=="__main__":
     main()
 
+# Fonts: Noto Sans, Lucinda, Arial

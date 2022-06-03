@@ -525,4 +525,155 @@ Worst:   119.92 microseconds
 
 Goodbye Cruel World!
 
+# ----------------------------------------------------------------
+# doom3_replayreport_crt_1x_WriteNone
+# ----------------------------------------------------------------
+Hello World!
 
+Selected Allocator: crt
+
+Write Strategy: NoWrite
+Nanoseconds per RDTSC tick: 0.270565
+
+Parsing log file: c:/temp/doom3_journal.txt
+Parse complete
+
+Pre-processing replay entries
+Num Fixups:           3
+Num Leaks:            8473
+Cross-thread Frees:   160875
+Pre-process complete
+
+Beginning replay
+Replay Duration: 433.59 seconds
+Replay Speed: 1
+Thread 12408 performed 188 allocs and 170 frees
+Thread 25524 performed 1 allocs and 0 frees
+Thread 19832 performed 120186 allocs and 117035 frees
+Thread 19604 performed 116095 allocs and 113475 frees
+Thread 8860 performed 1329134 allocs and 1320185 frees
+Thread 7360 performed 3966105 allocs and 3972371 frees
+Replay complete
+
+Writing alloc times to: c:/temp/doom3_replayreport_crt_1x_WriteNone.csv
+Write complete
+== Replay Results ==
+Number of Mallocs:    5531709
+Number of Frees:      5523236
+Total Allocation:     2.47 gigabytes
+Max Live Bytes:       330 megabytes
+Average Allocation:   480 bytes
+Median Allocation:    64 bytes
+Average Malloc Time:  58 nanoseconds
+Num Leaked Bytes:     7 megabytes
+
+Alloc Time
+Best:    21 nanoseconds
+p1:      22 nanoseconds
+p10:     22 nanoseconds
+p25:     24 nanoseconds
+p50:     31 nanoseconds
+p75:     45 nanoseconds
+p90:     60 nanoseconds
+p95:     93 nanoseconds
+p98:     216 nanoseconds
+p99:     371 nanoseconds
+p99.9:   2.81 microseconds
+p99.99:  26.18 microseconds
+p99.999: 89.04 microseconds
+Worst:   320.60 microseconds
+
+Free Time
+Best:    21 nanoseconds
+p1:      22 nanoseconds
+p10:     23 nanoseconds
+p25:     25 nanoseconds
+p50:     31 nanoseconds
+p75:     38 nanoseconds
+p90:     80 nanoseconds
+p95:     102 nanoseconds
+p98:     200 nanoseconds
+p99:     310 nanoseconds
+p99.9:   1.02 microseconds
+p99.99:  8.86 microseconds
+p99.999: 39.00 microseconds
+Worst:   1.57 milliseconds
+
+Goodbye Cruel World!
+
+
+# ----------------------------------------------------------------
+# doom3_replayreport_crt_1x_WriteAll
+# ----------------------------------------------------------------
+Hello World!
+
+Selected Allocator: crt
+
+Write Strategy: memset all
+Nanoseconds per RDTSC tick: 0.270517
+
+Parsing log file: c:/temp/doom3_journal.txt
+Parse complete
+
+Pre-processing replay entries
+Num Fixups:           3
+Num Leaks:            8473
+Cross-thread Frees:   160875
+Pre-process complete
+
+Beginning replay
+Replay Duration: 433.59 seconds
+Replay Speed: 1
+Thread 12408 performed 188 allocs and 170 frees
+Thread 25524 performed 1 allocs and 0 frees
+Thread 19832 performed 120186 allocs and 117035 frees
+Thread 19604 performed 116095 allocs and 113475 frees
+Thread 8860 performed 1329134 allocs and 1320185 frees
+Thread 7360 performed 3966105 allocs and 3972371 frees
+Replay complete
+
+Writing alloc times to: c:/temp/doom3_replayreport_crt_1x_WriteAll.csv
+Write complete
+== Replay Results ==
+Number of Mallocs:    5531709
+Number of Frees:      5523236
+Total Allocation:     2.47 gigabytes
+Max Live Bytes:       330 megabytes
+Average Allocation:   480 bytes
+Median Allocation:    64 bytes
+Average Malloc Time:  136 nanoseconds
+Num Leaked Bytes:     7 megabytes
+
+Alloc Time
+Best:    21 nanoseconds
+p1:      23 nanoseconds
+p10:     33 nanoseconds
+p25:     71 nanoseconds
+p50:     85 nanoseconds
+p75:     106 nanoseconds
+p90:     128 nanoseconds
+p95:     183 nanoseconds
+p98:     372 nanoseconds
+p99:     563 nanoseconds
+p99.9:   5.53 microseconds
+p99.99:  59.84 microseconds
+p99.999: 299.84 microseconds
+Worst:   9.25 milliseconds
+
+Free Time
+Best:    21 nanoseconds
+p1:      22 nanoseconds
+p10:     23 nanoseconds
+p25:     25 nanoseconds
+p50:     32 nanoseconds
+p75:     40 nanoseconds
+p90:     79 nanoseconds
+p95:     104 nanoseconds
+p98:     209 nanoseconds
+p99:     315 nanoseconds
+p99.9:   1.08 microseconds
+p99.99:  10.01 microseconds
+p99.999: 195.29 microseconds
+Worst:   4.62 milliseconds
+
+Goodbye Cruel World!
