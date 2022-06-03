@@ -14,7 +14,7 @@ import mpl_scatter_density
 # Config
 maxEntries = 0 # 0 = All
 prepare_alloc_graph = True
-prepare_free_graph = True
+prepare_free_graph = False
 prepare_p99 = True
 show_plot = False
 save_pngs = True
@@ -35,12 +35,12 @@ replays = {
     },
     "crtalloc_1x_writenone": {
         "csv_filename" : "doom3_replayreport_crt_1x_WriteNone.csv",
-        "chart_title" : "crt - 10x Speed",
+        "chart_title" : "crt - WriteNone",
         "friendly_name": "crt",
     },
     "crtmalloc_1x_writeall": {
         "csv_filename" : "doom3_replayreport_crt_1x_WriteAll.csv",
-        "chart_title" : "crt",
+        "chart_title" : "crt - WriteAll",
         "friendly_name": "crt",
     },
     "crtmalloc_10x_writebyte": {
@@ -79,11 +79,6 @@ replays = {
         "chart_title" : "jemalloc",
         "friendly_name": "jemalloc",
     },
-    # "jemalloc_10x_writebyte": {
-    #     "csv_filename" : "doom3_replayreport_jemalloc_10x_WriteByte.csv",
-    #     "chart_title" : "jemalloc - 10x Speed",
-    #     "friendly_name": "jemalloc",
-    # },
 
     # mimalloc
     "mimalloc_1x_writebyte": {
@@ -91,11 +86,6 @@ replays = {
         "chart_title" : "mimalloc",
         "friendly_name": "mimalloc",
     },
-    # "mimalloc_10x_writebyte": {
-    #     "csv_filename" : "doom3_replayreport_mimalloc_10x_WriteByte.csv",
-    #     "chart_title" : "mimalloc - 10x Speed",
-    #     "friendly_name": "mimalloc",
-    # },
 
     # rpmalloc
     "rpmalloc_1x_writebyte": {
@@ -103,11 +93,6 @@ replays = {
         "chart_title" : "rpmalloc",
         "friendly_name": "rpmalloc",
     },
-    # "rpmalloc_10x_writebyte": {
-    #     "csv_filename" : "doom3_replayreport_rpmalloc_10x_WriteByte.csv",
-    #     "chart_title" : "rpmalloc",
-    #     "friendly_name": "rpmalloc",
-    # },
 
     # tlsf
     "tlsf_1x_writebyte": {
@@ -115,16 +100,11 @@ replays = {
         "chart_title" : "tlsf",
         "friendly_name": "tlsf",
     },
-    # "tlsf_10x_writebyte": {
-    #     "csv_filename" : "doom3_replayreport_tlsf_10x_SingleThread_WriteByte.csv",
-    #     "chart_title" : "tlsf",
-    #     "friendly_name": "tlsf",
-    # },
 }
 
 # Replays to process
-selected_replays = None # None = All
-#selected_replays = ["crtmalloc_1x_writebyte"]
+#selected_replays = None # None = All
+selected_replays = ["crtalloc_1x_writenone", "crtmalloc_1x_writeall"]
 #selected_replays = ["crtmalloc_1x_writebyte", "HeapAlloc_1x_writebyte"]
 #selected_replays = ["crtmalloc_1x_writebyte", "dlmalloc_1x_writebyte", "jemalloc_1x_writebyte", "mimalloc_1x_writebyte", "rpmalloc_1x_writebyte", "tlsf_1x_writebyte"]
 percentile_replays = [
@@ -459,5 +439,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-# Fonts: Noto Sans, Lucinda, Arial
